@@ -121,8 +121,7 @@
         const body = data.rows.map(r => "<tr>" + data.columns.map(c => {
             const v = r[c.key];
             if (v === null || v === undefined) return "<td class='text-secondary'>NULL</td>";
-            if (c.key.toLowerCase().includes("salary") || c.key.toLowerCase().includes("count")
-                || c.key.toLowerCase().includes("base") || typeof v === "number") return `<td>${esc(money ? fmtNum(v) : v)}</td>`;
+            if (typeof v === "number") return `<td>${esc(fmtNum(v))}</td>`;
             return `<td>${esc(v)}</td>`;
         }).join("") + "</tr>").join("");
         area.innerHTML = `<table class="table table-sm table-hover align-middle mb-0">

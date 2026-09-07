@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -130,42 +131,75 @@ public class TextToSqlService {
                     "model", props.getModel(),
                     "messages", List.of(sys, user),
                     "temperature", 0,
-                    "max_tokens", 800,
-                    "stream", false
+                    "max_tokens", 4000,
+                    "stream", false,
+                    // 关键：强制关闭思考模式。V4 Flash 未显式指定时可能返回 reasoning_content，
+                    // 复杂问题下推理过程会耗尽 max_tokens 导致 content 为空（"AI 未返回有效 SQL"）。
+                    "thinking_mode", "non-thinking"
             );
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(props.getBaseUrl() + "/chat/completions"))
-                    .timeout(Duration.ofSeconds(props.getReadTimeoutSeconds()))
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + props.getApiKey())
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
-                    .build();
-
-            HttpResponse<String> resp = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() != 200) {
-                String msg = extractApiError(resp.statusCode(), resp.body());
-                throw BizException.badRequest(msg);
+            // DeepSeek 偶发返回空 content（同为 non-thinking 也有概率出现），最多尝试 3 次
+            String sql = null;
+            for (int attempt = 1; attempt <= 3 && sql == null; attempt++) {
+                if (attempt > 1) {
+                    log.warn("DeepSeek 第 {} 次返回空内容，稍后重试（question={}）", attempt, question);
+                    try {
+                        Thread.sleep(800L * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw ie;
+                    }
+                }
+                sql = callApi(body);
             }
-            JsonNode root = objectMapper.readTree(resp.body());
-            JsonNode content = root.path("choices").path(0).path("message").path("content");
-            if (content.isMissingNode() || content.asText().isBlank()) {
+            if (sql == null) {
                 throw BizException.badRequest("AI 未返回有效 SQL，请换个说法重试");
             }
-            return stripCodeFence(content.asText());
+            return sql;
         } catch (BizException e) {
             throw e;
         } catch (java.net.http.HttpTimeoutException e) {
             log.warn("DeepSeek 调用超时", e);
             throw BizException.badRequest("AI 服务响应超时（" + props.getReadTimeoutSeconds() + "s），请稍后重试");
-        } catch (java.io.IOException | InterruptedException e) {
-            log.warn("DeepSeek 调用失败", e);
+        } catch (InterruptedException e) {
+            // 只有真正被中断时才恢复中断标记，避免污染 Tomcat 复用线程
             Thread.currentThread().interrupt();
+            log.warn("DeepSeek 调用被中断", e);
+            throw BizException.badRequest("AI 服务调用被中断，请重试");
+        } catch (java.io.IOException e) {
+            log.warn("DeepSeek 调用网络失败", e);
             throw BizException.badRequest("AI 服务网络异常，请检查网络后重试");
         } catch (Exception e) {
             log.error("DeepSeek 调用异常", e);
             throw BizException.badRequest("AI 服务解析异常：" + e.getMessage());
         }
+    }
+
+    /** 单次调用 /chat/completions：返回清理后的 SQL 文本；content 为空返回 null；HTTP 错误抛业务异常 */
+    private String callApi(Map<String, Object> body) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(props.getBaseUrl() + "/chat/completions"))
+                .timeout(Duration.ofSeconds(props.getReadTimeoutSeconds()))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + props.getApiKey())
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
+                .build();
+
+        HttpResponse<String> resp = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() != 200) {
+            String msg = extractApiError(resp.statusCode(), resp.body());
+            throw BizException.badRequest(msg);
+        }
+        JsonNode root = objectMapper.readTree(resp.body());
+        JsonNode content = root.path("choices").path(0).path("message").path("content");
+        String text = content.isMissingNode() ? "" : content.asText();
+        if (text.isBlank()) {
+            String raw = resp.body();
+            log.warn("DeepSeek 返回空 content，原始响应前 300 字符：{}",
+                    raw.length() > 300 ? raw.substring(0, 300) : raw);
+            return null;
+        }
+        return stripCodeFence(text);
     }
 
     /** SQL 安全校验：仅 SELECT/WITH 开头、禁危险关键词、单条语句、强制 LIMIT */
