@@ -135,21 +135,37 @@ function exportCSV(filename, headers, rows) {
 
 /* ---------- Excel(.xlsx) 导出：POST 数据到后端通用导出接口，由 Apache POI 生成真实 Excel ---------- */
 async function exportXlsx(filename, columns, rows) {
+    // 文件名防御：强制携带 .xlsx 后缀
+    if (!/\.xlsx$/i.test(filename || "")) {
+        filename = (filename || "导出数据") + ".xlsx";
+    }
     const resp = await fetch("/api/export/xlsx", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ columns, rows })
+        body: JSON.stringify({ filename, columns, rows })
     });
-    if (!resp.ok) {
-        toast("导出失败，请稍后重试", "error");
+    // 后端异常时返回的是 JSON 错误（统一 Result 格式），不能当成文件下载
+    const ct = resp.headers.get("content-type") || "";
+    if (!ct.includes("spreadsheetml")) {
+        let msg = "导出失败，请稍后重试";
+        try {
+            const err = await resp.json();
+            if (err && err.message) msg = err.message;
+        } catch (e) { /* 非 JSON 响应，保持默认提示 */ }
+        toast(msg, "error");
         return;
     }
     const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
+    a.href = url;
+    a.download = filename;          // 写死完整文件名（含 .xlsx），浏览器优先使用该名称
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(a.href);
+    a.remove();
+    // 延迟释放 blob：点击后立刻 revoke 存在竞态，Chrome 可能因 blob 被回收
+    // 导致下载文件名回退为随机 UUID，延迟 3 秒释放规避
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
 /** 渲染 Bootstrap 表格数据行 */

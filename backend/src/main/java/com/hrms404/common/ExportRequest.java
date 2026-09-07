@@ -20,4 +20,7 @@ public class ExportRequest {
 
     private List<Column> columns;
     private List<Map<String, Object>> rows;
+
+    /** 导出文件名（含 .xlsx 后缀），缺省用"导出数据.xlsx" */
+    private String filename;
 }

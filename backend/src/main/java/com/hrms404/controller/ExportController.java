@@ -35,11 +35,15 @@ public class ExportController {
         if (request.getColumns() == null || request.getColumns().isEmpty()) {
             throw BizException.badRequest("导出列定义不能为空");
         }
-        String sheetName = request.getColumns().size() > 1 && request.getRows() != null
-                ? "导出数据" : "导出数据";
+        // 文件名防御：强制 .xlsx 后缀
+        String rawName = request.getFilename() == null || request.getFilename().isBlank()
+                ? "导出数据.xlsx" : request.getFilename().trim();
+        if (!rawName.toLowerCase().endsWith(".xlsx")) {
+            rawName += ".xlsx";
+        }
 
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            XSSFSheet sheet = workbook.createSheet(sheetName);
+            XSSFSheet sheet = workbook.createSheet("导出数据");
 
             // 表头样式：加粗 + 浅灰底
             CellStyle headerStyle = workbook.createCellStyle();
@@ -80,10 +84,11 @@ public class ExportController {
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             workbook.write(out);
-            String filename = URLEncoder.encode("导出数据.xlsx", StandardCharsets.UTF_8)
-                    .replace("+", "%20");
+            // Content-Disposition 双写：ASCII 兜底文件名 + RFC5987 中文文件名，兼容所有浏览器
+            String encoded = URLEncoder.encode(rawName, StandardCharsets.UTF_8).replace("+", "%20");
+            String disposition = "attachment; filename=\"export.xlsx\"; filename*=UTF-8''" + encoded;
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + filename)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
                     .contentType(MediaType.parseMediaType(
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .body(out.toByteArray());
