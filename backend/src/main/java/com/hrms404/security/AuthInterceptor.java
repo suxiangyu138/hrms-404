@@ -72,7 +72,8 @@ public class AuthInterceptor implements HandlerInterceptor {
     }
 
     private void writeJson(HttpServletResponse response, int code, String message) throws IOException {
-        response.setStatus(HttpServletResponse.SC_OK);
+        // 使用真实 HTTP 状态码（401 而非 200），前端导出等功能可据此区分错误响应与文件流
+        response.setStatus(code);
         response.setContentType("application/json;charset=UTF-8");
         String body = "{\"code\":" + code + ",\"message\":\"" + message + "\",\"data\":null}";
         response.getOutputStream().write(body.getBytes(StandardCharsets.UTF_8));

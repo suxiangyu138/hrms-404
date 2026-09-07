@@ -9,8 +9,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${title} + ' · HRMS-404'">页面 · HRMS-404</title>
-    <link rel="stylesheet" th:href="@{/vendor/bootstrap.min.css}">
-    <link rel="stylesheet" th:href="@{/css/hrms.css}">
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap.min.css(v=2)}">
+    <link rel="stylesheet" th:href="@{/css/hrms.css(v=2)}">
 </head>
 
 <!-- ========== 左侧菜单栏片段（220px） ========== -->
@@ -121,8 +121,8 @@
 
 <!-- ========== 底部资源片段 ========== -->
 <div th:fragment="scripts">
-    <script th:src="@{/vendor/bootstrap.bundle.min.js}"></script>
-    <script th:src="@{/js/hrms.js}"></script>
+    <script th:src="@{/vendor/bootstrap.bundle.min.js(v=2)}"></script>
+    <script th:src="@{/js/hrms.js(v=2)}"></script>
     <script>
         console.log("%c 404 Not Found %c 页面已找到，系统运行正常",
             "background:#2563eb;color:#fff;font-size:14px;padding:4px 8px;border-radius:4px 0 0 4px;font-weight:bold",
