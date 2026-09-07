@@ -141,14 +141,20 @@
         const dept = await api("/api/departments/tree", { silent: true });
         if (!dept) return;
         deptOptions = dept.tree;
-        document.getElementById("qDept").innerHTML = '<option value="">全部部门</option>'
-            + deptOptions.map(d => `<option value="${d.deptId}">${esc(d.deptPath)}</option>`).join("");
+        const options = deptOptions.map(d => `<option value="${d.deptId}">${esc(d.deptPath)}</option>`).join("");
+        // 列表页筛选下拉
+        document.getElementById("qDept").innerHTML = '<option value="">全部部门</option>' + options;
+        // 新增/编辑弹窗的部门下拉（必须填充，否则表单选不了部门）
+        document.getElementById("fDept").innerHTML = '<option value="">选择部门</option>' + options;
     }
 
     async function loadPositions(deptId, selected) {
-        if (!deptId) return;
-        const list = await api(`/api/employees/position-options?deptId=${deptId}`, { silent: true });
         const sel = document.getElementById("fPos");
+        if (!deptId) {
+            sel.innerHTML = '<option value="">选择职位</option>';
+            return;
+        }
+        const list = await api(`/api/employees/position-options?deptId=${deptId}`, { silent: true });
         if (list) {
             sel.innerHTML = '<option value="">选择职位</option>'
                 + list.map(p => `<option value="${p.positionId}">${esc(p.positionName)}（编制 ${p.headcount}）</option>`).join("");
@@ -231,10 +237,9 @@
         document.getElementById("empModalTitle").textContent = "新增员工";
         fillEmpForm({});
         document.getElementById("fEmpNo").disabled = false;
-        if (deptOptions.length) {
-            document.getElementById("fDept").value = deptOptions[0].deptId;
-            loadPositions(deptOptions[0].deptId, null);
-        }
+        // 部门与职位留空，由用户选择部门后联动加载职位
+        document.getElementById("fDept").value = "";
+        document.getElementById("fPos").innerHTML = '<option value="">选择职位</option>';
         bootstrap.Modal.getOrCreateInstance(document.getElementById("empModal")).show();
     }
 

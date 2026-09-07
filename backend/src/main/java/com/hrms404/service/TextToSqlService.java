@@ -142,7 +142,7 @@ public class TextToSqlService {
             String sql = null;
             for (int attempt = 1; attempt <= 3 && sql == null; attempt++) {
                 if (attempt > 1) {
-                    log.warn("DeepSeek 第 {} 次返回空内容，稍后重试（question={}）", attempt, question);
+                    log.warn("DeepSeek 返回空内容，自动重试第 {} 次", attempt);
                     try {
                         Thread.sleep(800L * attempt);
                     } catch (InterruptedException ie) {
@@ -194,9 +194,9 @@ public class TextToSqlService {
         JsonNode content = root.path("choices").path(0).path("message").path("content");
         String text = content.isMissingNode() ? "" : content.asText();
         if (text.isBlank()) {
-            String raw = resp.body();
-            log.warn("DeepSeek 返回空 content，原始响应前 300 字符：{}",
-                    raw.length() > 300 ? raw.substring(0, 300) : raw);
+            // 只记录结束原因便于排查，不落原始响应/问题内容
+            JsonNode finish = root.path("choices").path(0).path("finish_reason");
+            log.warn("DeepSeek 返回空 content（finish_reason={}）", finish.asText("unknown"));
             return null;
         }
         return stripCodeFence(text);
