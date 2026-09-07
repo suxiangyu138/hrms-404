@@ -47,7 +47,7 @@ application-secret.yml
 实验报告_个人/
 
 # ===== 调试/测试截图与临时图片 =====
-ui-shots/*-fixed.png
+ui-shots/
 导出格式问题.png
 
 # ===== Python 缓存 =====
