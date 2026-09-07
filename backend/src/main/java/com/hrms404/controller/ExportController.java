@@ -1,7 +1,8 @@
 package com.hrms404.controller;
 
-import com.hrms404.common.BizException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hrms404.common.ExportRequest;
+import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Font;
@@ -12,8 +13,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.ByteArrayOutputStream;
@@ -24,16 +25,31 @@ import java.util.Map;
 
 /**
  * 通用 Excel 导出接口：
- * 前端把已加载的数据（列定义 + 行数据）POST 过来，后端用 Apache POI 生成真正的 .xlsx 文件
+ * 前端通过原生 form 表单提交（data 字段为 JSON），后端用 Apache POI 生成 .xlsx 返回。
+ * 原生表单下载由浏览器直接处理，遵循服务器 Content-Disposition 文件名，
+ * 不依赖 Blob/download 属性，兼容所有浏览器与下载管理器。
  */
 @RestController
 @RequestMapping("/api/export")
+@RequiredArgsConstructor
 public class ExportController {
 
-    @PostMapping("/xlsx")
-    public ResponseEntity<byte[]> exportXlsx(@RequestBody ExportRequest request) throws IOException {
+    private final ObjectMapper objectMapper;
+
+    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public ResponseEntity<?> exportXlsx(@RequestParam("data") String data) throws IOException {
+        ExportRequest request;
+        try {
+            request = objectMapper.readValue(data, ExportRequest.class);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("code", 400, "message", "导出参数解析失败，请重试", "data", ""));
+        }
         if (request.getColumns() == null || request.getColumns().isEmpty()) {
-            throw BizException.badRequest("导出列定义不能为空");
+            return ResponseEntity.badRequest()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("code", 400, "message", "导出列定义不能为空", "data", ""));
         }
         // 文件名防御：强制 .xlsx 后缀
         String rawName = request.getFilename() == null || request.getFilename().isBlank()
@@ -64,10 +80,10 @@ public class ExportController {
             // 数据行：数字写数字单元格、字符串写文本单元格
             if (request.getRows() != null) {
                 int rowIdx = 1;
-                for (Map<String, Object> data : request.getRows()) {
+                for (Map<String, Object> dataRow : request.getRows()) {
                     Row row = sheet.createRow(rowIdx++);
                     for (int i = 0; i < request.getColumns().size(); i++) {
-                        Object value = data.get(request.getColumns().get(i).getKey());
+                        Object value = dataRow.get(request.getColumns().get(i).getKey());
                         Cell cell = row.createCell(i);
                         if (value == null) {
                             cell.setBlank();
@@ -84,7 +100,7 @@ public class ExportController {
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             workbook.write(out);
-            // Content-Disposition 双写：ASCII 兜底文件名 + RFC5987 中文文件名，兼容所有浏览器
+            // Content-Disposition 双写：ASCII 兜底文件名 + RFC5987 中文文件名
             String encoded = URLEncoder.encode(rawName, StandardCharsets.UTF_8).replace("+", "%20");
             String disposition = "attachment; filename=\"export.xlsx\"; filename*=UTF-8''" + encoded;
             return ResponseEntity.ok()
