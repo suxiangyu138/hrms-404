@@ -87,7 +87,7 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead><tr>
                         <th>员工姓名</th><th>部门</th><th>出勤天数</th><th>正常</th>
-                        <th>迟到</th><th>早退</th><th>出勤率</th>
+                        <th>迟到</th><th>早退</th><th>正常出勤率</th>
                     </tr></thead>
                     <tbody id="sumBody"></tbody>
                 </table>
@@ -201,7 +201,8 @@
             return;
         }
         body.innerHTML = rows.map(r => {
-            const rate = Math.round((r.normalCnt + r.lateCnt + r.earlyCnt) * 100 / Math.max(1, r.workDays));
+            // 正常出勤率 = 正常天数 / 出勤天数（迟到且早退的日子会同时计入迟到与早退两列，不能相加作分子）
+            const rate = Math.round(r.normalCnt * 100 / Math.max(1, r.workDays));
             return `<tr>
               <td><b>${esc(r.empName)}</b></td>
               <td>${esc(r.deptName)}</td>
@@ -217,7 +218,7 @@
     function exportSummary() {
         const headers = [
             { key: "a", label: "员工姓名" }, { key: "b", label: "部门" }, { key: "c", label: "出勤天数" },
-            { key: "d", label: "正常" }, { key: "e", label: "迟到" }, { key: "f", label: "早退" }, { key: "g", label: "出勤率" }
+            { key: "d", label: "正常" }, { key: "e", label: "迟到" }, { key: "f", label: "早退" }, { key: "g", label: "正常出勤率" }
         ];
         const rows = [...document.querySelectorAll("#sumBody tr")]
             .filter(tr => !tr.innerHTML.includes("empty-404"))
