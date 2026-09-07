@@ -1,0 +1,34 @@
+# ===== Java / Maven 构建产物 =====
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+dependency-reduced-pom.xml
+buildNumber.properties
+
+# ===== IDE 配置（不提交） =====
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+
+# ===== 日志与临时文件 =====
+*.log
+logs/
+temp/
+*.tmp
+
+# ===== 系统文件 =====
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ===== 敏感配置（API Key / 数据库密码放环境变量或本地配置，勿提交） =====
+.env
+*.local.yml
+application-secret.yml
