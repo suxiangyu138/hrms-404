@@ -1,134 +1,296 @@
 /* =====================================================================
-   HRMS-404 人事管理系统 · 自定义样式（404 Not Found 小组）
+   HRMS-404 人事管理系统 · 统一界面样式（前端界面设计方案 v1）
+   设计规范：冷调蓝主色 · 中性灰分层 · 状态色仅用于标识 · 三区布局
    ===================================================================== */
 :root {
-    --hrms-ink: #1d2733;
-    --hrms-404: #e11d48;
-    --hrms-bg: #f2f4f8;
+    /* 主色板（冷调蓝） */
+    --blue: #2563eb;
+    --blue-deep: #1d4ed8;
+    --blue-soft: #eff6ff;
+    --blue-border: #bfdbfe;
+
+    /* 中性灰分层 */
+    --bg: #f3f5f9;          /* 页面背景（灰中带蓝） */
+    --card: #ffffff;        /* 卡片背景 */
+    --text-1: #1e2a3a;      /* 主标题（深蓝灰） */
+    --text-2: #54616f;      /* 正文（中灰） */
+    --text-3: #93a0ae;      /* 辅助（浅灰） */
+    --line: #e5e9f0;        /* 分割线 */
+
+    /* 状态色（仅用于标识） */
+    --green: #16a34a;
+    --green-soft: #e8f7ee;
+    --amber: #d97706;
+    --amber-soft: #fdf3e0;
+    --red: #e11d48;         /* 朱红：危险/删除/离职 */
+    --red-soft: #fdeef1;
+
+    --radius: 4px;
+    --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 6px rgba(16, 24, 40, .06);
 }
 
+html, body { height: 100%; }
 body {
-    background: var(--hrms-bg);
-    color: var(--hrms-ink);
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-1);
     font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
 }
 
-/* ---------- 顶栏 ---------- */
-.navbar-hrms {
+/* ================= 三区布局 ================= */
+.layout { display: flex; min-height: 100vh; }
+
+/* ---- 左侧菜单栏 220px ---- */
+.app-side {
+    width: 224px;
+    flex: 0 0 224px;
     background: #fff;
-    box-shadow: 0 1px 6px rgba(16, 24, 40, .08);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+.side-brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
 }
 .brand-404 {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 9px;
-    background: linear-gradient(135deg, #e11d48, #be123c);
-    color: #fff;
-    font-weight: 800;
-    font-size: .95rem;
-    letter-spacing: -.5px;
-    box-shadow: 0 2px 6px rgba(225, 29, 72, .35);
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: var(--radius);
+    background: linear-gradient(135deg, #f43f5e, var(--red));
+    color: #fff; font-weight: 700; font-size: .9rem; letter-spacing: -.4px;
+    flex: 0 0 auto;
+}
+.brand-name { line-height: 1.15; }
+.brand-name b { display: block; font-size: 14px; color: var(--text-1); }
+.brand-name span { font-size: 11px; color: var(--text-3); }
+.side-nav { flex: 1; padding: 10px 12px; }
+.side-label {
+    font-size: 11px; color: var(--text-3); padding: 12px 8px 4px;
+    letter-spacing: 1px;
+}
+.side-link {
+    display: block; padding: 8px 10px; margin: 1px 0;
+    border-radius: var(--radius);
+    color: var(--text-2); text-decoration: none; font-size: 13.5px;
+    transition: background .12s, color .12s;
+}
+.side-link:hover { background: var(--blue-soft); color: var(--blue); }
+.side-link.active { background: var(--blue-soft); color: var(--blue); font-weight: 600; }
+.side-note {
+    padding: 12px 16px; border-top: 1px solid var(--line);
+    font-size: 11px; color: var(--text-3); line-height: 1.7;
+}
+
+/* ---- 右侧区域 ---- */
+.main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+/* 顶部导航栏 56px：系统级操作与身份标识 */
+.app-top {
+    height: 56px; background: var(--card);
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; position: sticky; top: 0; z-index: 1000;
+}
+.app-top-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.app-top-sub { font-size: 12px; color: var(--text-3); }
+.user-menu { display: flex; align-items: center; gap: 10px; }
+.avatar-circle {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--blue-soft); color: var(--blue);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600;
 }
 .role-badge {
-    background: #eef2ff;
-    color: #4338ca;
-    border-radius: 999px;
-    font-size: .72rem;
-    padding: .2rem .6rem;
+    background: var(--blue-soft); color: var(--blue);
+    border-radius: 999px; font-size: 11px; padding: 2px 8px;
 }
-.navbar-hrms .nav-link { color: #475569; font-size: .92rem; padding-inline: .8rem; }
-.navbar-hrms .nav-link:hover { color: var(--hrms-404); }
-.navbar-hrms .nav-link.active { color: var(--hrms-404); font-weight: 600; }
 
-/* ---------- 布局 ---------- */
-.app-container { padding: 1.25rem 1.4rem 4rem; }
-.app-footer {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #fff;
-    border-top: 1px solid #e8ecf2;
-    text-align: center;
-    padding: .45rem 0;
-    font-size: .78rem;
-    color: #94a3b8;
-    z-index: 1030;
+/* 主内容区 */
+.app-content { flex: 1; padding: 20px 24px 40px; }
+.app-container { flex: 1; padding: 20px 24px 40px; }
+
+/* ================= 页面标题区 ================= */
+.page-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
 }
-.page-title { font-size: 1.15rem; font-weight: 700; margin: 0; }
-.page-sub { color: #64748b; font-size: .85rem; }
+.page-title { font-size: 20px; font-weight: 700; margin: 0; color: var(--text-1); }
+.page-sub { color: var(--text-3); font-size: 12.5px; margin-top: 3px; }
+.page-extra { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-/* ---------- 面板 / 表格 ---------- */
+/* ================= 卡片 / 筛选栏 ================= */
 .card-panel {
-    border: 0;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 8px; box-shadow: var(--shadow);
 }
+.filter-bar {
+    background: #f8fafc; border: 1px solid var(--line);
+    border-radius: 8px; padding: 12px 14px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.filter-bar .form-control, .filter-bar .form-select { background: #fff; }
+.table-card { margin-top: 0; }
+.table-card .table { margin-bottom: 0; }
+
+/* ================= 表格规范 ================= */
 .table-card thead th {
-    background: #f8fafc;
-    color: #475569;
-    font-size: .8rem;
-    font-weight: 600;
+    background: #f7f9fc; color: var(--text-2);
+    font-size: 12.5px; font-weight: 600;
+    padding: 12px; border-bottom: 1px solid var(--line);
     white-space: nowrap;
 }
-.table-card td { vertical-align: middle; font-size: .88rem; }
-.status-pill { display: inline-block; padding: .15rem .55rem; border-radius: 999px; font-size: .75rem; }
-.st-on { background: #dcfce7; color: #15803d; }
-.st-off { background: #fee2e2; color: #b91c1c; }
-.st-badge { display: inline-block; padding: .1rem .5rem; border-radius: 6px; font-size: .75rem; }
-.st-normal { background: #dcfce7; color: #15803d; }
-.st-late { background: #fef9c3; color: #a16207; }
-.st-early { background: #ffe4e6; color: #be123c; }
-.st-none { background: #e2e8f0; color: #475569; }
+.table-card tbody td { vertical-align: middle; font-size: 13.5px; padding: 12px; }
+.table-card tbody tr { border-bottom: 1px solid #f0f3f7; }
+.table-card tbody tr:hover { background: var(--blue-soft); }
+.table-card tbody tr:last-child { border-bottom: none; }
 
-/* ---------- 空数据 404 占位 ---------- */
+/* 状态标识（圆点 + 文字，仅状态列使用颜色） */
+.status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12.5px;
+}
+.status-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.status-on { color: var(--green); }
+.status-on::before { background: var(--green); }
+.status-off { color: var(--text-3); }
+.status-off::before { background: #b9c3cf; }
+.st-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 12px; background: var(--blue-soft); color: var(--blue);
+}
+.st-badge.st-late { background: var(--amber-soft); color: var(--amber); }
+.st-badge.st-early, .st-badge.st-danger { background: var(--red-soft); color: var(--red); }
+.st-badge.st-on { background: var(--green-soft); color: var(--green); }
+
+/* ================= 按钮规范 =================
+   主按钮：主色填充；次按钮：白底主色边框文字；文字按钮：无背景 */
+.btn { border-radius: var(--radius); font-size: 13.5px; }
+.btn-brand { background: var(--blue); border-color: var(--blue); color: #fff; }
+.btn-brand:hover, .btn-brand:disabled { background: var(--blue-deep); border-color: var(--blue-deep); color: #fff; }
+.btn-outline-brand { color: var(--blue); border-color: var(--blue); background: #fff; }
+.btn-outline-brand:hover { background: var(--blue-soft); color: var(--blue-deep); }
+.btn-text { color: var(--blue); background: none; border: none; padding: 4px 6px; font-size: 13px; }
+.btn-text:hover { text-decoration: underline; background: none; }
+.btn-text-danger { color: var(--text-3); }
+.btn-text-danger:hover { color: var(--red); text-decoration: underline; }
+.btn:disabled { background: #e8ecf2; border-color: #e8ecf2; color: #a7b1bd; }
+
+/* 兼容旧页面内联色（历史红色主按钮 → 统一主色，删除状态仍用朱红类） */
+button[style*="e11d48"], button[style*="be123c"], button[style*="16a34a"] {
+    background: var(--blue) !important;
+    border-color: var(--blue) !important;
+    color: #fff !important;
+}
+button[style*="e11d48"]:hover, button[style*="be123c"]:hover, button[style*="16a34a"]:hover {
+    background: var(--blue-deep) !important;
+}
+
+/* ================= 表单 ================= */
+.form-control, .form-select {
+    height: 36px; border-color: #d6dde6; font-size: 13.5px;
+    border-radius: var(--radius);
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--blue); box-shadow: 0 0 0 2px rgba(37, 99, 235, .15);
+}
+.form-label { font-size: 12.5px; font-weight: 600; color: var(--text-2); margin-bottom: 4px; }
+.form-label .req { color: var(--red); }
+
+/* ================= 弹窗 ================= */
+.modal-content { border: none; border-radius: 8px; box-shadow: 0 20px 60px rgba(15, 23, 42, .18); }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.modal-title { font-size: 16px; font-weight: 700; }
+.modal-body { padding: 20px; }
+.modal-footer { border-top: 1px solid var(--line); padding: 12px 20px; }
+.field-group-title {
+    font-size: 12px; color: var(--blue); font-weight: 700;
+    border-left: 3px solid var(--blue); padding-left: 8px;
+    margin: 2px 0 12px;
+}
+
+/* ================= 空状态（品牌 404 占位） ================= */
 .empty-404 {
-    border: 1.5px dashed #cbd5e1;
-    border-radius: 12px;
-    background: #fff;
-    text-align: center;
-    color: #94a3b8;
-    padding: 2.2rem 1rem;
+    border: 1px dashed #cfd8e3; border-radius: 8px; background: #fafbfd;
+    text-align: center; color: var(--text-3); padding: 30px 16px;
 }
-.empty-404 .big { font-size: 2rem; font-weight: 800; color: #cbd5e1; letter-spacing: 2px; }
+.empty-404 .big { font-size: 26px; font-weight: 800; color: #d3dce6; letter-spacing: 3px; }
 
-/* ---------- 登录页 ---------- */
+/* ================= 登录页（蓝紫渐变 + 毛玻璃卡片） ================= */
 .login-bg {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(1200px 500px at 20% -10%, #312e81 0%, transparent 55%),
-    radial-gradient(1000px 600px at 110% 110%, #831843 0%, transparent 50%), #0f172a;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(150deg, #3b6fe0 0%, #5a46c9 52%, #7c3aed 100%);
 }
-.login-card { width: 380px; border: 0; border-radius: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, .35); }
-.login-brand { text-align: center; margin-bottom: 1.2rem; }
-.login-hint { font-size: .78rem; color: #94a3b8; }
+.login-card {
+    width: 384px; border: none; border-radius: 10px;
+    background: rgba(255, 255, 255, .92);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 24px 70px rgba(23, 37, 84, .35);
+}
+.login-brand { text-align: center; margin-bottom: 16px; }
+.login-hint { font-size: 11.5px; color: var(--text-3); }
 
-/* ---------- SQL 结果 ---------- */
+/* ================= SQL 展示区 ================= */
 .sql-pre {
-    background: #0f172a;
-    color: #a5f3fc;
-    border-radius: 10px;
-    font-size: .82rem;
-    padding: .9rem 1rem;
-    white-space: pre-wrap;
+    background: #0f172a; color: #7dd3fc; border-radius: 6px;
+    font-size: 12.5px; font-family: Consolas, "Courier New", monospace;
+    padding: 12px 14px; white-space: pre-wrap; min-height: 80px;
 }
-.stat-num { font-size: 1.5rem; font-weight: 800; }
-.card-stat .card-body { padding: 1rem 1.1rem; }
-.copy-btn { cursor: pointer; }
 
-/* ---------- 部门树 ---------- */
-.dept-row { cursor: default; }
-.tree-actions button { opacity: 0; transition: opacity .12s; }
-.dept-row:hover .tree-actions button { opacity: 1; }
-.dept-depth { color: #cbd5e1; font-family: monospace; }
+/* ================= 考勤日历 ================= */
+.att-card { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.clock-time { font-size: 30px; font-weight: 800; color: var(--text-1); font-variant-numeric: tabular-nums; }
+.clock-btn { width: 132px; height: 132px; border-radius: 50%; border: none;
+    color: #fff; font-size: 15px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 2px;
+    transition: transform .12s, box-shadow .12s; }
+.clock-btn.in { background: var(--blue); box-shadow: 0 10px 26px rgba(37, 99, 235, .35); }
+.clock-btn.out { background: var(--red); box-shadow: 0 10px 26px rgba(225, 29, 72, .3); }
+.clock-btn:hover { transform: translateY(-2px); }
+.clock-btn:disabled { opacity: .35; transform: none; box-shadow: none; }
+.calendar th, .calendar td { text-align: center; padding: 4px 0; }
+.calendar-day { height: 52px; }
+.calendar-day .day-num { font-size: 13px; color: var(--text-2); }
+.calendar-day.today .day-num {
+    background: var(--blue); color: #fff; border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px;
+}
+.calendar-day .dot { font-size: 9px; letter-spacing: 2px; }
+.dot.ok { color: var(--green); }
+.dot.bad { color: var(--red); }
 
-/* 提示浮层 */
-#toastHost { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 2000; display: flex; flex-direction: column; gap: 8px; align-items: center; }
-.hrms-toast { background: #0f172a; color: #fff; padding: .55rem 1rem; border-radius: 10px; font-size: .85rem; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); animation: toastIn .2s ease-out; max-width: 70vw; }
-.hrms-toast.err { background: #b91c1c; }
+/* ================= 统计卡片 ================= */
+.card-stat .stat-label { font-size: 12.5px; color: var(--text-3); }
+.card-stat .stat-num { font-size: 24px; font-weight: 800; color: var(--text-1); }
+
+/* ================= Toast ================= */
+#toastHost { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 3000;
+    display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.hrms-toast {
+    background: var(--green); color: #fff; padding: 8px 18px;
+    border-radius: 6px; font-size: 13px; box-shadow: 0 10px 28px rgba(15, 23, 42, .22);
+    animation: toastIn .18s ease-out; max-width: 72vw;
+}
+.hrms-toast.err { background: var(--red); }
+.hrms-toast.warn { background: var(--amber); }
 @keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+/* ================= 部门树 ================= */
+.dept-row td:first-child { cursor: pointer; }
+.tree-arrow { display: inline-block; width: 14px; color: var(--text-3); font-size: 11px; }
+.dept-row .tree-actions button { opacity: 0; transition: opacity .12s; }
+.dept-row:hover .tree-actions button { opacity: 1; }
+
+/* ================= 登录/旧布局兼容元素 ================= */
+.app-footer {
+    border-top: 1px solid var(--line); background: #fff;
+    padding: 8px 16px; text-align: center; font-size: 12px; color: var(--text-3);
+}
+.stat-num small { font-size: 13px; color: var(--text-3); font-weight: 400; }

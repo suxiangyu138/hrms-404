@@ -1,18 +1,18 @@
 <!DOCTYPE html>
-<!-- HRMS-404 部门管理（树形） -->
+<!-- HRMS-404 部门管理（树形表格） -->
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('部门管理','departments')}"></head>
 <body>
 <header th:replace="~{fragments :: topbar('departments')}"></header>
 
 <main class="app-container">
-    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+    <div class="page-head">
         <div>
             <h1 class="page-title">部门管理</h1>
-            <div class="page-sub">组织树由存储过程 <code>sp_get_org_tree</code> 递归返回；人数统计含全部下级部门</div>
+            <div class="page-sub">组织树由存储过程递归生成；点击部门名称可展开或收起下级部门</div>
         </div>
-        <div class="ms-auto">
-            <button class="btn btn-sm px-3" style="background:#e11d48;color:#fff;border:0" onclick="openDept(null)">＋ 新增部门</button>
+        <div class="page-extra">
+            <button class="btn btn-brand" onclick="openDept(null)">新增部门</button>
         </div>
     </div>
 
@@ -20,41 +20,43 @@
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead><tr>
-                    <th>部门（层级缩进）</th><th>编制预算上限</th><th>直属人数</th><th>含子部门人数</th><th class="text-end">操作</th>
+                    <th>部门</th><th>上级部门</th><th>编制预算</th><th>直属人数</th>
+                    <th>含子部门人数</th><th style="width:210px">操作</th>
                 </tr></thead>
                 <tbody id="deptBody"></tbody>
             </table>
         </div>
     </div>
-    <p class="text-secondary small mt-2">💡 提示：部门删除前需无子部门且无员工；编制预算上限用于校验新增职位的编制数（触发器 trg_check_budget）。</p>
+    <p class="text-secondary mt-2" style="font-size:12.5px">
+        说明：部门下有子部门或员工时不可删除；职位编制总和受部门编制预算约束（触发器校验）。
+    </p>
 </main>
 
-<!-- 弹窗 -->
-<div class="modal fade" id="deptModal" tabindex="-1">
+<div class="modal fade" id="deptModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" id="deptModalTitle">新增部门</h5>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deptModalTitle">新增部门</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="fDeptId">
                 <div class="mb-3">
-                    <label class="form-label small">上级部门</label>
+                    <label class="form-label">上级部门</label>
                     <select class="form-select" id="fParent"></select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small">部门名称 *</label>
+                    <label class="form-label">部门名称 <span class="req">*</span></label>
                     <input class="form-control" id="fDeptName" maxlength="50">
                 </div>
-                <div class="mb-1">
-                    <label class="form-label small">编制预算上限（人数，可留空=不限）</label>
+                <div>
+                    <label class="form-label">编制预算上限（人数）<span class="text-secondary fw-normal">（可留空表示不限）</span></label>
                     <input type="number" min="1" class="form-control" id="fBudget" placeholder="如 25">
                 </div>
             </div>
-            <div class="modal-footer border-0 pt-0">
-                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
-                <button class="btn px-4" style="background:#e11d48;color:#fff;border:0" onclick="saveDept()">保 存</button>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-brand px-4" onclick="saveDept()">保存</button>
             </div>
         </div>
     </div>
@@ -64,51 +66,72 @@
 <div th:replace="~{fragments :: scripts}"></div>
 <div th:replace="~{fragments :: globalActions}"></div>
 <script>
-    let tree = [], nodeMap = {};
+    let tree = [], nodeMap = {}, children = {}, collapsed = {};
 
     async function load() {
         const d = await api("/api/departments/tree", { silent: true });
         if (!d) return;
         tree = d.tree;
         nodeMap = Object.fromEntries(tree.map(n => [n.deptId, n]));
+        children = {};
+        tree.forEach(n => { if (n.parentId != null) (children[n.parentId] ||= []).push(n); });
+        const roots = tree.filter(n => n.parentId == null);
         const body = document.getElementById("deptBody");
-        if (!tree.length) {
-            body.innerHTML = `<tr><td colspan="5">${empty404()}</td></tr>`;
-            return;
-        }
-        body.innerHTML = tree.map(n => {
-            const parentName = n.parentId == null ? "—（顶级）" : (nodeMap[n.parentId]?.deptName ?? "-");
-            return `
+        body.innerHTML = roots.length ? renderLevel(roots, 0, d)
+            : `<tr><td colspan="6"><div class="empty-404 m-4"><div class="big">404</div>
+               <div class="mt-1">暂无部门，新增第一条吧</div></div></td></tr>`;
+    }
+
+    function renderLevel(nodes, level, d) {
+        let html = "";
+        nodes.forEach(n => {
+            const kids = children[n.deptId] || [];
+            const open = !collapsed[n.deptId];
+            const parentName = n.parentId == null ? "（顶级）" : (nodeMap[n.parentId]?.deptName ?? "-");
+            const indent = 10 + level * 24;
+            html += `
             <tr class="dept-row">
               <td>
-                <span class="dept-depth">${'│'.repeat(n.deptLevel)}${n.deptLevel ? '└ ' : ''}</span>
-                <b>${esc(n.deptName)}</b>
-                <span class="text-secondary small ms-2">(${esc(n.deptPath)})</span>
+                <div style="padding-left:${indent}px">
+                  <span class="tree-arrow" onclick="toggleDept(${n.deptId})">${kids.length ? (open ? "▾" : "▸") : "&nbsp;"}</span>
+                  <b class="${kids.length ? 'toggleable' : ''}" ${kids.length ? `onclick="toggleDept(${n.deptId})"` : ""}
+                     style="cursor:${kids.length ? 'pointer' : 'default'}">${esc(n.deptName)}</b>
+                </div>
               </td>
+              <td class="text-secondary">${esc(parentName)}</td>
               <td>${n.headcountBudget == null ? '<span class="text-secondary">不限</span>' : n.headcountBudget + ' 人'}</td>
               <td>${d.directCounts[n.deptId] ?? 0} 人</td>
-              <td><span class="status-pill st-on">${d.subtreeCounts[n.deptId] ?? 0} 人</span></td>
-              <td class="text-end tree-actions">
-                <button class="btn btn-sm btn-outline-secondary" onclick="openDept(${n.deptId})">＋下级</button>
-                <button class="btn btn-sm btn-outline-primary" onclick="editDept(${n.deptId})">编辑</button>
-                <button class="btn btn-sm btn-outline-danger" onclick="delDept(${n.deptId},'${esc(n.deptName)}')">删除</button>
+              <td><span class="status-pill status-on">${d.subtreeCounts[n.deptId] ?? 0} 人</span></td>
+              <td class="tree-actions">
+                <button class="btn-text" onclick="openDept(${n.deptId})">添加下级</button>
+                <button class="btn-text" onclick="editDept(${n.deptId})">编辑</button>
+                <button class="btn-text btn-text-danger" onclick="delDept(${n.deptId},'${esc(n.deptName)}')">删除</button>
               </td>
             </tr>`;
-        }).join("");
+            if (kids.length && open) html += renderLevel(kids, level + 1, d);
+        });
+        return html;
+    }
+
+    function toggleDept(id) {
+        collapsed[id] = !collapsed[id];
+        load();
     }
 
     function fillParentSelect(exceptId) {
         const sel = document.getElementById("fParent");
+        const isDesc = (id, rootId) => {
+            let cur = nodeMap[id];
+            while (cur && cur.parentId != null) {
+                if (cur.parentId === Number(rootId)) return true;
+                cur = nodeMap[cur.parentId];
+            }
+            return false;
+        };
         sel.innerHTML = '<option value="">（顶级部门）</option>'
-            + tree.filter(n => n.deptId !== Number(exceptId) && !(exceptId && isDescendant(n.deptId, exceptId)))
+            + tree.filter(n => n.deptId !== Number(exceptId) && !(exceptId && isDesc(n.deptId, exceptId)))
                 .map(n => `<option value="${n.deptId}">${esc(n.deptPath)}</option>`).join("");
         return sel;
-    }
-
-    function isDescendant(id, rootId) {
-        let cur = nodeMap[id];
-        while (cur && cur.parentId != null) { if (cur.parentId === Number(rootId)) return true; cur = nodeMap[cur.parentId]; }
-        return false;
     }
 
     function openDept(parentId) {
@@ -116,14 +139,13 @@
         document.getElementById("fDeptId").value = "";
         document.getElementById("fDeptName").value = "";
         document.getElementById("fBudget").value = "";
-        const sel = fillParentSelect(null);
-        sel.value = parentId || "";
+        fillParentSelect(null).value = parentId || "";
         bootstrap.Modal.getOrCreateInstance(document.getElementById("deptModal")).show();
     }
 
     function editDept(id) {
         const n = nodeMap[id];
-        document.getElementById("deptModalTitle").textContent = "编辑部门 · " + n.deptName;
+        document.getElementById("deptModalTitle").textContent = "编辑部门";
         document.getElementById("fDeptId").value = id;
         document.getElementById("fDeptName").value = n.deptName;
         document.getElementById("fBudget").value = n.headcountBudget ?? "";
@@ -133,22 +155,22 @@
 
     async function saveDept() {
         const id = document.getElementById("fDeptId").value;
+        const name = document.getElementById("fDeptName").value.trim();
+        if (!name) return toast("请输入部门名称", "error");
         const body = {
-            deptName: document.getElementById("fDeptName").value.trim(),
+            deptName: name,
             parentId: document.getElementById("fParent").value || null,
-            headcountBudget: document.getElementById("fBudget").value
-                ? Number(document.getElementById("fBudget").value) : null
+            headcountBudget: document.getElementById("fBudget").value ? Number(document.getElementById("fBudget").value) : null
         };
-        if (!body.deptName) return toast("部门名称不能为空", "error");
         const r = await api(id ? `/api/departments/${id}` : "/api/departments",
             { method: id ? "PUT" : "POST", body: JSON.stringify(body) });
-        if (r !== null) { toast("保存成功"); hideModal("deptModal"); load(); }
+        if (r !== null) { toast("已保存"); hideModal("deptModal"); load(); }
     }
 
     async function delDept(id, name) {
-        if (!await confirmDlg(`确认删除部门【${name}】？有子部门或员工时无法删除。`)) return;
+        if (!await confirmDlg(`确定要删除部门“${name}”吗？存在子部门或员工时将无法删除。`)) return;
         const r = await api("/api/departments/" + id, { method: "DELETE" });
-        if (r !== null) { toast("部门已删除（它已从组织架构 404）"); load(); }
+        if (r !== null) { toast("部门已删除"); load(); }
     }
 
     load();

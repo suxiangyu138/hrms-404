@@ -6,40 +6,37 @@
 <header th:replace="~{fragments :: topbar('my')}"></header>
 
 <main class="app-container">
-    <div class="d-flex align-items-center gap-3 mb-3">
+    <div class="page-head">
         <div>
             <h1 class="page-title">我的中心</h1>
             <div class="page-sub" th:text="|${session.LOGIN_USER.roleName} · ${session.LOGIN_USER.deptName} · ${session.LOGIN_USER.positionName}|">
-                个人信息 · 我的考勤 · 我的薪资
+                个人档案 · 我的考勤 · 我的薪资
             </div>
         </div>
     </div>
 
     <div class="row g-3">
-        <div class="col-lg-4">
+        <div class="col-xl-4">
             <div class="card card-panel h-100">
-                <div class="card-header bg-white border-0 pt-3"><span class="fw-semibold">👤 我的档案</span></div>
-                <div class="card-body" id="myInfo">
+                <div class="card-header bg-white border-bottom py-3 px-4 fw-semibold">个人档案</div>
+                <div class="card-body p-4 pt-3" id="myInfo">
                     <div class="text-secondary small">加载中…</div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-8">
-            <div class="card card-panel mb-3">
-                <div class="card-header bg-white border-0 pt-3 d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold">🕘 我的本月考勤</span>
-                    <div class="d-flex gap-2 align-items-center">
-                        <input type="month" class="form-control form-control-sm" id="myMonth" style="width:160px"
-                               th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM')}">
-                        <button class="btn btn-sm btn-outline-dark" onclick="loadAtt()">查看</button>
-                    </div>
+        <div class="col-xl-8">
+            <div class="card card-panel table-card mb-3">
+                <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">本月考勤</span>
+                    <input type="month" class="form-control form-control-sm" id="myMonth" style="width:150px"
+                           th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM')}">
                 </div>
-                <div class="card-body table-responsive p-0" id="myAttArea"></div>
+                <div class="table-responsive" id="myAttArea"></div>
             </div>
-            <div class="card card-panel">
-                <div class="card-header bg-white border-0 pt-3"><span class="fw-semibold">💰 我的薪资记录</span></div>
-                <div class="card-body table-responsive p-0">
-                    <table class="table table-hover align-middle mb-0 table-card">
+            <div class="card card-panel table-card">
+                <div class="card-header bg-white border-bottom py-3 px-4 fw-semibold">薪资记录</div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
                         <thead><tr><th>月份</th><th>基本工资</th><th>绩效</th><th>扣款</th><th class="text-end">实发工资</th></tr></thead>
                         <tbody id="salBody"></tbody>
                     </table>
@@ -57,35 +54,40 @@
         const info = await api("/api/my/info", { silent: true });
         const el = document.getElementById("myInfo");
         if (!info) {
-            el.innerHTML = `<div class="text-secondary small">当前账号未绑定员工档案（管理员账号）。</div>`;
+            el.innerHTML = `<div class="text-secondary small">当前账号为管理员，未关联员工档案。</div>`;
             return;
         }
-        el.innerHTML = `<ul class="list-group list-group-flush">
-            <li class="list-group-item px-2 d-flex justify-content-between"><span class="text-secondary">工号</span><b>${esc(info.empNo)}</b></li>
-            <li class="list-group-item px-2 d-flex justify-content-between"><span class="text-secondary">姓名</span><b>${esc(info.empName)}</b></li>
-            <li class="list-group-item px-2 d-flex justify-content-between"><span class="text-secondary">性别 / 出生</span>${esc(info.gender)} · ${esc(fmtDate(info.birthDate))}</li>
-            <li class="list-group-item px-2 d-flex justify-content-between"><span class="text-secondary">电话</span>${esc(info.phone || "-")}</li>
-            <li class="list-group-item px-2 d-flex justify-content-between"><span class="text-secondary">邮箱</span>${esc(info.email || "-")}</li>
-            <li class="list-group-item px-2 d-flex justify-content-between"><span class="text-secondary">部门 / 职位</span>${esc(info.deptName)} · ${esc(info.positionName)}</li>
-            <li class="list-group-item px-2 d-flex justify-content-between"><span class="text-secondary">入职日期</span>${esc(fmtDate(info.hireDate))}</li>
-            <li class="list-group-item px-2 d-flex justify-content-between"><span class="text-secondary">状态</span>${empStatusBadge(info.status)}</li>
-        </ul>`;
+        const rows = [
+            ["工号", info.empNo], ["姓名", info.empName],
+            ["性别", `${info.gender} · ${fmtDateZh(info.birthDate)} 出生`],
+            ["联系方式", info.phone ? maskPhone(info.phone) : "-"],
+            ["邮箱", info.email || "-"],
+            ["任职", `${info.deptName} · ${info.positionName}`],
+            ["入职日期", fmtDateZh(info.hireDate)],
+            ["状态", ""]
+        ];
+        el.innerHTML = rows.map(([k, v]) => `
+            <div class="d-flex justify-content-between py-2 ${k === '任职' ? '' : 'border-bottom'}" style="border-color:#f0f3f7">
+                <span class="text-secondary">${k}</span>
+                <span class="text-end">${k === "状态" ? empStatusBadge(info.status) : esc(v)}</span>
+            </div>`).join("");
     }
 
     async function loadAtt() {
         const month = document.getElementById("myMonth").value || monthNow();
-        const rows = await api("/api/my/attendance?month=" + month, { silent: true });
+        const rows = await api(`/api/my/attendance?month=${month}`, { silent: true });
         const area = document.getElementById("myAttArea");
         if (!rows || !rows.length) {
-            area.innerHTML = `<div class="p-4">${empty404(`404：${month} 暂无打卡记录`)}</div>`;
+            area.innerHTML = `<div class="empty-404 m-4"><div class="big">404</div>
+                <div class="mt-1">${month} 暂无打卡记录</div></div>`;
             return;
         }
-        area.innerHTML = `<table class="table table-hover align-middle mb-0 table-card">
+        area.innerHTML = `<table class="table table-hover align-middle mb-0">
             <thead><tr><th>日期</th><th>上班打卡</th><th>下班打卡</th><th>状态</th></tr></thead>
             <tbody>${rows.map(r => `<tr>
-                <td>${esc(fmtDate(r.workDate))}</td>
-                <td>${r.checkInTime ? esc(fmtDateTime(r.checkInTime)) : "-"}</td>
-                <td>${r.checkOutTime ? esc(fmtDateTime(r.checkOutTime)) : "-"}</td>
+                <td>${fmtDateZh(r.workDate)}</td>
+                <td>${r.checkInTime ? fmtTime(r.checkInTime) : '<span class="text-secondary">-</span>'}</td>
+                <td>${r.checkOutTime ? fmtTime(r.checkOutTime) : '<span class="text-secondary">-</span>'}</td>
                 <td>${attBadge(r.status)}</td>
             </tr>`).join("")}</tbody></table>`;
     }
@@ -94,7 +96,8 @@
         const rows = await api("/api/my/salaries", { silent: true });
         const body = document.getElementById("salBody");
         if (!rows || !rows.length) {
-            body.innerHTML = `<tr><td colspan="5" class="text-center text-secondary py-4">暂无薪资记录（等待 HR 生成）</td></tr>`;
+            body.innerHTML = `<tr><td colspan="5"><div class="empty-404 m-4"><div class="big">404</div>
+                <div class="mt-1">暂无薪资记录，等待 HR 生成</div></div></td></tr>`;
             return;
         }
         body.innerHTML = rows.map(r => `
@@ -110,6 +113,7 @@
     loadInfo();
     loadAtt();
     loadSal();
+    document.getElementById("myMonth").addEventListener("change", loadAtt);
 </script>
 </body>
 </html>

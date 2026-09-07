@@ -17,6 +17,25 @@ function esc(v) {
     return String(v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+/** ISO 日期(yyyy-MM-dd) → 中文日期（2026年9月7日） */
+function fmtDateZh(s) {
+    if (!s) return "-";
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[1]}年${Number(m[2])}月${Number(m[3])}日` : String(s);
+}
+
+/** ISO 日期时间 → 时间（HH:mm），展示用 */
+function fmtTime(s) {
+    const m = String(s || "").match(/(\d{2}:\d{2})(:\d{2})?/);
+    return m ? m[1] : "-";
+}
+
+/** 手机号中间四位脱敏 */
+function maskPhone(p) {
+    if (!p) return "-";
+    return String(p).replace(/^(\d{3})\d{4}(\d{4})$/, "$1****$2");
+}
+
 /** Toast 轻提示 */
 function toast(msg, type = "success", ms = 2600) {
     let host = document.getElementById("toastHost");
@@ -53,14 +72,13 @@ function confirmDlg(message, okText = "确定") {
             modalEl.id = "hrmsConfirm";
             modalEl.className = "modal fade";
             modalEl.innerHTML = `<div class="modal-dialog modal-dialog-centered modal-sm">
-                <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-content rounded-4 shadow">
                   <div class="modal-body pt-4 pb-2 text-center">
-                    <div style="font-size:2rem;line-height:1">🧭</div>
-                    <p class="mt-2 mb-1 fw-semibold" id="hrmsConfirmMsg"></p>
+                    <p class="mt-1 mb-1 fw-semibold" id="hrmsConfirmMsg"></p>
                   </div>
-                  <div class="modal-footer border-0 justify-content-center pb-3 pt-0">
+                  <div class="modal-footer justify-content-center pb-3 pt-0 border-0">
                     <button class="btn btn-outline-secondary btn-sm px-4" data-bs-dismiss="modal">取消</button>
-                    <button class="btn btn-danger btn-sm px-4" id="hrmsConfirmOk">${esc(okText)}</button>
+                    <button class="btn btn-brand btn-sm px-4" id="hrmsConfirmOk">${esc(okText)}</button>
                   </div>
                 </div></div>`;
             document.body.appendChild(modalEl);
@@ -89,10 +107,12 @@ const money = v => Number(v ?? 0).toLocaleString("zh-CN", { minimumFractionDigit
 
 const ATT_TEXT = { 0: "未完成", 1: "正常", 2: "迟到", 3: "早退", 4: "迟到早退" };
 function attBadge(status) {
-    const cls = { 1: "st-normal", 2: "st-late", 3: "st-early", 4: "st-late" }[status] || "st-none";
+    const cls = { 1: "st-on", 2: "st-late", 3: "st-early", 4: "st-late" }[status] || "";
     return `<span class="st-badge ${cls}">${esc(ATT_TEXT[status] ?? status)}</span>`;
 }
-const empStatusBadge = s => s === 1 ? `<span class="status-pill st-on">在职</span>` : `<span class="status-pill st-off">已离职</span>`;
+const empStatusBadge = s => s === 1
+    ? '<span class="status-pill status-on">在职</span>'
+    : '<span class="status-pill status-off">已离职</span>';
 
 /* ---------- CSV 导出 ---------- */
 function exportCSV(filename, headers, rows) {

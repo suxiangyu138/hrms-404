@@ -9,10 +9,10 @@
     <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
         <div>
             <h1 class="page-title">职位管理</h1>
-            <div class="page-sub">编制数受部门预算上限约束（触发器 trg_check_budget）——超出会收到 409 报错</div>
+            <div class="page-sub">编制总和受部门编制预算上限约束，超出上限的保存将被拒绝</div>
         </div>
-        <div class="ms-auto">
-            <button class="btn btn-sm px-3" style="background:#e11d48;color:#fff;border:0" onclick="openPos()">＋ 新增职位</button>
+        <div class="page-extra">
+            <button class="btn btn-brand" onclick="openPos()">新增职位</button>
         </div>
     </div>
 
@@ -103,8 +103,8 @@
               </td>
               <td class="text-end">¥ ${money(p.baseSalary)}</td>
               <td class="text-end">
-                <button class="btn btn-sm btn-outline-primary" onclick="editPos(${p.positionId})">编辑</button>
-                <button class="btn btn-sm btn-outline-danger" onclick="delPos(${p.positionId},'${esc(p.positionName)}')">删除</button>
+                <button class="btn-text" onclick="editPos(${p.positionId})">编辑</button>
+                <button class="btn-text btn-text-danger" onclick="delPos(${p.positionId},'${esc(p.positionName)}')">删除</button>
               </td>
             </tr>`;
         }).join("");

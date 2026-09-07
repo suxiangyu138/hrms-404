@@ -24,6 +24,9 @@ temp/
 *.tmp
 build.log
 
+# ===== 浏览器自动化快照 =====
+.playwright-mcp/
+
 # ===== 系统文件 =====
 Thumbs.db
 Desktop.ini

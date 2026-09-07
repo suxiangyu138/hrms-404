@@ -8,7 +8,7 @@
 <main class="app-container">
     <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
         <div>
-            <h1 class="page-title">👋 你好，<span th:text="${session.LOGIN_USER.empName ?: session.LOGIN_USER.username}">用户</span></h1>
+            <h1 class="page-title">你好，<span th:text="${session.LOGIN_USER.empName ?: session.LOGIN_USER.username}">用户</span></h1>
             <div class="page-sub">
                 欢迎使用人事管理系统（HRMS-404）
                 <span th:if="${session.LOGIN_USER.roleCode == 'MANAGER'}"
@@ -31,13 +31,13 @@
         <div class="col-lg-5">
             <div class="card card-panel h-100">
                 <div class="card-header bg-white border-0 pt-3 d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold">今日考勤（小组彩蛋：迟到的都会被打回 404 形神）</span>
+                    <span class="fw-semibold">今日考勤</span>
                     <span class="role-badge" id="todayClockTip"></span>
                 </div>
                 <div class="card-body text-center py-5" id="todayClock">
                     <div class="stat-num mb-1">--</div>
                     <div class="text-secondary small mb-3">打卡状态</div>
-                    <button class="btn btn-danger btn-sm px-4" onclick="location.href='/attendance'" style="background:#e11d48;border:0">去打卡</button>
+                    <button class="btn btn-brand btn-sm px-4" onclick="location.href='/attendance'">去打卡</button>
                 </div>
             </div>
         </div>
@@ -72,15 +72,15 @@
             box.innerHTML = `<div class="text-secondary">管理员账号（admin）未绑定员工，无打卡业务</div>`;
         } else if (today === null) {
             box.querySelector(".stat-num").textContent = "未打卡";
-            document.getElementById("todayClockTip").textContent = "今天也要元气满满";
+            document.getElementById("todayClockTip").textContent = "点击去打卡开始今日考勤";
         } else if (!today.checkOutTime) {
-            box.querySelector(".stat-num").textContent = ATT_TEXT[today.status] + " · 在岗";
-            box.innerHTML += `<div class="small text-secondary">${esc(fmtDateTime(today.checkInTime))} 上班打卡</div>`;
-            document.getElementById("todayClockTip").textContent = "别忘记打下班卡";
+            box.querySelector(".stat-num").textContent = ATT_TEXT[today.status];
+            box.innerHTML += `<div class="small text-secondary">${esc(fmtTime(today.checkInTime))} 上班打卡</div>`;
+            document.getElementById("todayClockTip").textContent = "在岗中，请及时打下班卡";
         } else {
             box.querySelector(".stat-num").textContent = "已完成";
-            box.innerHTML += `<div class="small text-secondary">${esc(fmtDateTime(today.checkInTime))} ~ ${esc(fmtDateTime(today.checkOutTime))}</div>`;
-            document.getElementById("todayClockTip").textContent = "下班快乐";
+            box.innerHTML += `<div class="small text-secondary">${esc(fmtTime(today.checkInTime))} 至 ${esc(fmtTime(today.checkOutTime))}</div>`;
+            document.getElementById("todayClockTip").textContent = "今日考勤已完成";
         }
         // 3. 组织架构预览（员工账号不显示全量结构，改为个人简介）
         const info = await api("/api/my/info", { silent: true });
