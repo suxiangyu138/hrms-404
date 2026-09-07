@@ -133,6 +133,25 @@ function exportCSV(filename, headers, rows) {
     URL.revokeObjectURL(a.href);
 }
 
+/* ---------- Excel(.xlsx) 导出：POST 数据到后端通用导出接口，由 Apache POI 生成真实 Excel ---------- */
+async function exportXlsx(filename, columns, rows) {
+    const resp = await fetch("/api/export/xlsx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ columns, rows })
+    });
+    if (!resp.ok) {
+        toast("导出失败，请稍后重试", "error");
+        return;
+    }
+    const blob = await resp.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
 /** 渲染 Bootstrap 表格数据行 */
 function tbodyHtml(list, rowBuilder) {
     if (!list || !list.length) return "";

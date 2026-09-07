@@ -43,7 +43,7 @@
         <div class="col-lg-7">
             <div class="card card-panel mb-3">
                 <div class="card-header bg-white border-0 pt-3 d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold">🧠 AI 生成的 SQL（可手动修正后再次执行）</span>
+                    <span class="fw-semibold">AI 生成的 SQL（可手动修正后再次执行）</span>
                     <div>
                         <button class="btn btn-sm btn-outline-secondary" onclick="copySql()">复制</button>
                         <button class="btn btn-sm btn-outline-dark" onclick="reRun()" disabled id="rerunBtn">执行已显示 SQL</button>
@@ -55,8 +55,8 @@
             </div>
             <div class="card card-panel">
                 <div class="card-header bg-white border-0 pt-3 d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold">📊 查询结果 <span class="small text-secondary" id="resultMeta"></span></span>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="exportResult()" id="exportBtn" disabled>导出 CSV</button>
+                    <span class="fw-semibold">查询结果 <span class="small text-secondary" id="resultMeta"></span></span>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportResult()" id="exportBtn" disabled>导出 Excel</button>
                 </div>
                 <div class="card-body table-responsive" id="resultArea">
                     <div class="empty-404"><div class="big">404 NOT FOUND</div>
@@ -148,11 +148,11 @@
         } finally { btn.disabled = false; }
     }
 
-    function exportResult() {
+    async function exportResult() {
         if (!lastResult) return;
-        exportCSV(`AI查询结果_${dateNow()}.csv`,
+        await exportXlsx(`AI查询结果_${dateNow()}.xlsx`,
             lastResult.columns, lastResult.rows);
-        toast("CSV 已导出");
+        toast("Excel 已导出");
     }
 </script>
 </body>

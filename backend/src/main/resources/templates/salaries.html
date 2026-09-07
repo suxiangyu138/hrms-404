@@ -17,7 +17,7 @@
         <div class="page-extra">
             <select class="form-select" id="monthSel" style="width:140px"></select>
             <button class="btn btn-brand" onclick="generateMonth()">生成当月薪资</button>
-            <button class="btn btn-outline-brand" onclick="exportSalary()">导出报表</button>
+            <button class="btn btn-outline-brand" onclick="exportSalary()">导出 Excel</button>
         </div>
     </div>
 
@@ -169,19 +169,17 @@
         if (r !== null) { toast("已保存，实发工资已重算"); hideModal("adjModal"); loadSalary(); }
     }
 
-    function exportSalary() {
+    async function exportSalary() {
+        if (!curRows.length) return toast("暂无数据可导出", "error");
         const month = document.getElementById("monthSel").value;
-        const headers = [
+        const columns = [
             { key: "empNo", label: "工号" }, { key: "empName", label: "姓名" }, { key: "deptName", label: "部门" },
             { key: "baseSalary", label: "基本工资" }, { key: "performance", label: "绩效" },
-            { key: "deduction", label: "扣款" }, { key: "actualSalary", label: "实发工资" }
+            { key: "deduction", label: "扣款" }, { key: "actualSalary", label: "实发工资" },
+            { key: "createdAt", label: "生成时间" }
         ];
-        exportCSV(`薪资_${month}.csv`, headers, curRows.map(r => ({
-            empNo: r.empNo, empName: r.empName, deptName: r.deptName,
-            baseSalary: r.baseSalary, performance: r.performance,
-            deduction: r.deduction, actualSalary: r.actualSalary
-        })));
-        toast("已导出 CSV 文件");
+        await exportXlsx(`薪资_${month}.xlsx`, columns, curRows);
+        toast("Excel 已导出");
     }
 
     (async () => {

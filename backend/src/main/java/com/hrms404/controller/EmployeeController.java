@@ -33,6 +33,15 @@ public class EmployeeController {
         return Result.success(employeeService.page(page, size, keyword, deptId, status));
     }
 
+    /** 按筛选条件返回全部匹配员工（Excel 导出用，不受分页限制） */
+    @GetMapping("/export-list")
+    public Result<List<EmployeeInfoVO>> exportList(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long deptId,
+            @RequestParam(required = false) Integer status) {
+        return Result.success(employeeService.listAll(keyword, deptId, status));
+    }
+
     /** 详情 */
     @GetMapping("/{id}")
     public Result<EmployeeInfoVO> detail(@PathVariable Long id) {

@@ -80,7 +80,7 @@
             <input type="month" class="form-control form-control-sm" id="sumMonth"
                    style="width:160px" th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM')}">
             <button class="btn btn-outline-brand btn-sm px-3" onclick="loadSummary()">查看</button>
-            <button class="btn btn-text ms-auto" onclick="exportSummary()">导出 CSV</button>
+            <button class="btn btn-text ms-auto" onclick="exportSummary()">导出 Excel</button>
         </div>
         <div class="card card-panel table-card">
             <div class="table-responsive">
@@ -216,9 +216,9 @@
         }).join("");
     }
 
-    function exportSummary() {
+    async function exportSummary() {
         if (!sumRows.length) return toast("暂无数据可导出", "error");
-        const headers = [
+        const columns = [
             { key: "empName", label: "员工姓名" }, { key: "deptName", label: "部门" },
             { key: "workDays", label: "出勤天数" }, { key: "normalCnt", label: "正常" },
             { key: "lateCnt", label: "迟到" }, { key: "earlyCnt", label: "早退" },
@@ -233,8 +233,8 @@
             earlyCnt: r.earlyCnt,
             rate: Math.round(r.normalCnt * 100 / Math.max(1, r.workDays)) + "%"
         }));
-        exportCSV(`考勤汇总_${document.getElementById("sumMonth").value}.csv`, headers, rows);
-        toast("已导出 CSV 文件");
+        await exportXlsx(`考勤汇总_${document.getElementById("sumMonth").value}.xlsx`, columns, rows);
+        toast("Excel 已导出");
     }
 
     (async () => {

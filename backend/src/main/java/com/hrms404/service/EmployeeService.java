@@ -57,6 +57,33 @@ public class EmployeeService {
         return PageResult.of(employeeInfoMapper.selectPage(Page.of(page, size), wrapper));
     }
 
+    /** 按筛选条件返回全部匹配员工（导出用，不受分页限制；MANAGER 自动限制部门子树） */
+    public List<EmployeeInfoVO> listAll(String keyword, Long deptId, Integer status) {
+        Roles.require(Roles.of(Roles.ADMIN, Roles.HR, Roles.MANAGER));
+
+        LambdaQueryWrapper<EmployeeInfoVO> wrapper = new LambdaQueryWrapper<>();
+        if (keyword != null && !keyword.isBlank()) {
+            wrapper.and(w -> w.like(EmployeeInfoVO::getEmpName, keyword.trim())
+                    .or().like(EmployeeInfoVO::getEmpNo, keyword.trim()));
+        }
+        if (status != null) {
+            wrapper.eq(EmployeeInfoVO::getStatus, status);
+        }
+
+        LoginSession user = UserContext.get();
+        if (ScopeUtil.managerScoped(user)) {
+            List<Long> deptIds = ScopeUtil.scopedDeptIds(departmentMapper, user);
+            if (deptIds == null || deptIds.isEmpty()) {
+                return List.of();
+            }
+            wrapper.in(EmployeeInfoVO::getDeptId, deptIds);
+        } else if (deptId != null) {
+            wrapper.eq(EmployeeInfoVO::getDeptId, deptId);
+        }
+        wrapper.orderByAsc(EmployeeInfoVO::getEmpId);
+        return employeeInfoMapper.selectList(wrapper);
+    }
+
     /** 员工详情（视图）；MANAGER 只能查看本部门子树内的员工 */
     public EmployeeInfoVO detail(Long id) {
         Roles.require(Roles.of(Roles.ADMIN, Roles.HR, Roles.MANAGER));

@@ -284,6 +284,30 @@
         }
     };
 
+    async function exportEmployees() {
+        const p = new URLSearchParams();
+        const kw = document.getElementById("qKeyword").value.trim();
+        const dept = role === "MANAGER" ? "" : document.getElementById("qDept").value;
+        const status = document.getElementById("qStatus").value;
+        if (kw) p.set("keyword", kw);
+        if (dept) p.set("deptId", dept);
+        if (status !== "") p.set("status", status);
+        toast("正在生成 Excel…");
+        const list = await api("/api/employees/export-list?" + p.toString(), { silent: true });
+        if (list === null) return;
+        if (!list.length) return toast("暂无数据可导出", "error");
+        const columns = [
+            { key: "empNo", label: "工号" }, { key: "empName", label: "姓名" },
+            { key: "gender", label: "性别" }, { key: "deptName", label: "部门" },
+            { key: "positionName", label: "职位" }, { key: "phone", label: "电话" },
+            { key: "email", label: "邮箱" }, { key: "hireDate", label: "入职日期" },
+            { key: "statusText", label: "状态" }
+        ];
+        const rows = list.map(e => ({ ...e, statusText: e.status === 1 ? "在职" : "已离职" }));
+        await exportXlsx(`员工列表_${dateNow()}.xlsx`, columns, rows);
+        toast("Excel 已导出");
+    }
+
     async function leaveEmp(id, name) {
         if (!await confirmDlg(`确定要将“${name}”办理离职吗？离职后其账号将被禁用。`)) return;
         const r = await api(`/api/employees/${id}/status`, { method: "PUT", body: JSON.stringify({ status: 0 }) });
@@ -296,10 +320,9 @@
     }
 
     (async () => {
-        if (CAN_EDIT) {
-            document.getElementById("toolbarAdmin").innerHTML =
-                `<button class="btn btn-brand" onclick="openCreate()">新增员工</button>`;
-        }
+        document.getElementById("toolbarAdmin").innerHTML =
+            (CAN_EDIT ? `<button class="btn btn-brand" onclick="openCreate()">新增员工</button>` : "")
+            + `<button class="btn btn-outline-brand" onclick="exportEmployees()">导出 Excel</button>`;
         await loadDepts();
         await loadEmployees();
     })();
