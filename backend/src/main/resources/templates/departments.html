@@ -3,7 +3,10 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('部门管理','departments')}"></head>
 <body>
-<header th:replace="~{fragments :: topbar('departments')}"></header>
+<div class="layout">
+    <aside th:replace="~{fragments :: sidebar('departments')}"></aside>
+    <div class="main-col">
+        <div th:replace="~{fragments :: topbar('departments')}"></div>
 
 <main class="app-container">
     <div class="page-head">
@@ -62,7 +65,9 @@
     </div>
 </div>
 
-<footer th:replace="~{fragments :: footer}"></footer>
+        <div th:replace="~{fragments :: footer}"></div>
+    </div>
+</div>
 <div th:replace="~{fragments :: scripts}"></div>
 <div th:replace="~{fragments :: globalActions}"></div>
 <script>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- HRMS-404 公共片段：head / 三区布局(侧边栏+顶栏) / 页脚 / 脚本（404 Not Found 小组） -->
+<!-- HRMS-404 公共片段：head / 侧边栏 / 顶栏 / 页脚 / 脚本（404 Not Found 小组）
+     注意：每个片段必须是完整闭合的元素，页面通过三区布局骨架组合它们 -->
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <body>
 
@@ -12,8 +13,45 @@
     <link rel="stylesheet" th:href="@{/css/hrms.css}">
 </head>
 
-<!-- ========== 三区布局片段：左侧菜单栏 + 顶部导航栏 ========== -->
-<header th:fragment="topbar(active)">
+<!-- ========== 左侧菜单栏片段（220px） ========== -->
+<aside class="app-side" th:fragment="sidebar(active)">
+    <div class="side-brand">
+        <span class="brand-404">404</span>
+        <div class="brand-name">
+            <b>人事管理系统</b>
+            <span>HRMS-404 · 数据库课程设计</span>
+        </div>
+    </div>
+    <nav class="side-nav">
+        <div class="side-label">概览</div>
+        <a class="side-link" th:classappend="${active=='home'}?'active'" th:href="@{/}">首页</a>
+
+        <div class="side-label" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR' or session.LOGIN_USER.roleCode == 'MANAGER'}">组织与人事</div>
+        <a class="side-link" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR' or session.LOGIN_USER.roleCode == 'MANAGER'}"
+           th:classappend="${active=='employees'}?'active'" th:href="@{/employees}">员工管理</a>
+        <a class="side-link" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR'}"
+           th:classappend="${active=='departments'}?'active'" th:href="@{/departments}">部门管理</a>
+        <a class="side-link" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR'}"
+           th:classappend="${active=='positions'}?'active'" th:href="@{/positions}">职位管理</a>
+
+        <div class="side-label">日常业务</div>
+        <a class="side-link" th:classappend="${active=='attendance'}?'active'" th:href="@{/attendance}">考勤打卡</a>
+        <a class="side-link" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR'}"
+           th:classappend="${active=='salaries'}?'active'" th:href="@{/salaries}">薪资管理</a>
+
+        <div class="side-label" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR' or session.LOGIN_USER.roleCode == 'MANAGER'}">智能应用</div>
+        <a class="side-link" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR' or session.LOGIN_USER.roleCode == 'MANAGER'}"
+           th:classappend="${active=='text2sql'}?'active'" th:href="@{/text2sql}">AI 智能查询</a>
+
+        <div class="side-label" th:if="${session.LOGIN_USER.empId != null}">个人</div>
+        <a class="side-link" th:if="${session.LOGIN_USER.empId != null}"
+           th:classappend="${active=='my'}?'active'" th:href="@{/my}">我的中心</a>
+    </nav>
+    <div class="side-note">404 Not Found 小组<br>人事管理系统数据库课程设计</div>
+</aside>
+
+<!-- ========== 顶部导航栏片段（56px，含会话注入） ========== -->
+<div th:fragment="topbar(active)">
     <!-- 会话注入：页面 JS 读取 data-* 获取当前用户 -->
     <div id="ctx" class="d-none" th:attr="data-username=${session.LOGIN_USER.username},
         data-emp-name=${session.LOGIN_USER.empName},
@@ -21,49 +59,9 @@
         data-role=${session.LOGIN_USER.roleCode},
         data-role-name=${session.LOGIN_USER.roleName}"></div>
 
-    <div class="layout">
-        <!-- 左侧菜单栏：220px，功能分组导航 -->
-        <aside class="app-side">
-            <div class="side-brand">
-                <span class="brand-404">404</span>
-                <div class="brand-name">
-                    <b>人事管理系统</b>
-                    <span>HRMS-404 · 数据库课程设计</span>
-                </div>
-            </div>
-            <nav class="side-nav">
-                <div class="side-label">概览</div>
-                <a class="side-link" th:classappend="${active=='home'}?'active'" th:href="@{/}">首页</a>
-
-                <div class="side-label" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR' or session.LOGIN_USER.roleCode == 'MANAGER'}">组织与人事</div>
-                <a class="side-link" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR' or session.LOGIN_USER.roleCode == 'MANAGER'}"
-                   th:classappend="${active=='employees'}?'active'" th:href="@{/employees}">员工管理</a>
-                <a class="side-link" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR'}"
-                   th:classappend="${active=='departments'}?'active'" th:href="@{/departments}">部门管理</a>
-                <a class="side-link" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR'}"
-                   th:classappend="${active=='positions'}?'active'" th:href="@{/positions}">职位管理</a>
-
-                <div class="side-label">日常业务</div>
-                <a class="side-link" th:classappend="${active=='attendance'}?'active'" th:href="@{/attendance}">考勤打卡</a>
-                <a class="side-link" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR'}"
-                   th:classappend="${active=='salaries'}?'active'" th:href="@{/salaries}">薪资管理</a>
-
-                <div class="side-label" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR' or session.LOGIN_USER.roleCode == 'MANAGER'}">智能应用</div>
-                <a class="side-link" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR' or session.LOGIN_USER.roleCode == 'MANAGER'}"
-                   th:classappend="${active=='text2sql'}?'active'" th:href="@{/text2sql}">AI 智能查询</a>
-
-                <div class="side-label" th:if="${session.LOGIN_USER.empId != null}">个人</div>
-                <a class="side-link" th:if="${session.LOGIN_USER.empId != null}"
-                   th:classappend="${active=='my'}?'active'" th:href="@{/my}">我的中心</a>
-            </nav>
-            <div class="side-note">404 Not Found 小组<br>人事管理系统数据库课程设计</div>
-        </aside>
-
-        <!-- 右侧：顶部导航 + 内容区（内容区由页面主体提供，页脚片段负责闭合） -->
-        <div class="main-col">
-            <div class="app-top">
-                <div>
-                    <span class="app-top-title" th:text="${active == 'home' ? '首页'
+    <div class="app-top">
+        <div>
+            <span class="app-top-title" th:text="${active == 'home' ? '首页'
                         : (active == 'employees' ? '员工管理'
                         : (active == 'departments' ? '部门管理'
                         : (active == 'positions' ? '职位管理'
@@ -71,26 +69,26 @@
                         : (active == 'salaries' ? '薪资管理'
                         : (active == 'text2sql' ? 'AI 智能查询'
                         : (active == 'my' ? '我的中心' : '人事管理系统')))))))}">人事管理系统</span>
-                    <span class="app-top-sub ms-2">v4.0.4</span>
-                </div>
-                <div class="user-menu">
-                    <span class="role-badge" th:text="${session.LOGIN_USER.roleName}">角色</span>
-                    <div class="dropdown">
-                        <a class="dropdown-toggle text-decoration-none d-flex align-items-center gap-2"
-                           style="color:var(--text-1)" href="#" data-bs-toggle="dropdown">
-                            <span class="avatar-circle" th:text="${session.LOGIN_USER.empName != null ? session.LOGIN_USER.empName.substring(0,1) : '管'}">我</span>
-                            <span style="font-size:13.5px" th:text="${session.LOGIN_USER.empName ?: session.LOGIN_USER.username}">用户</span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                            <li th:if="${session.LOGIN_USER.empId != null}"><a class="dropdown-item" th:href="@{/my}">个人中心</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="changePassword(event)">修改密码</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" onclick="logout(event)">退出登录</a></li>
-                        </ul>
-                    </div>
-                </div>
+            <span class="app-top-sub ms-2">v4.0.4</span>
+        </div>
+        <div class="user-menu">
+            <span class="role-badge" th:text="${session.LOGIN_USER.roleName}">角色</span>
+            <div class="dropdown">
+                <a class="dropdown-toggle text-decoration-none d-flex align-items-center gap-2"
+                   style="color:var(--text-1)" href="#" data-bs-toggle="dropdown">
+                    <span class="avatar-circle" th:text="${session.LOGIN_USER.empName != null ? session.LOGIN_USER.empName.substring(0,1) : '管'}">我</span>
+                    <span style="font-size:13.5px" th:text="${session.LOGIN_USER.empName ?: session.LOGIN_USER.username}">用户</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li th:if="${session.LOGIN_USER.empId != null}"><a class="dropdown-item" th:href="@{/my}">个人中心</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="changePassword(event)">修改密码</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="#" onclick="logout(event)">退出登录</a></li>
+                </ul>
             </div>
-</header>
+        </div>
+    </div>
+</div>
 
 <!-- ========== 修改密码/登出 公共脚本 ========== -->
 <script th:fragment="globalActions">
@@ -114,14 +112,12 @@
     }
 </script>
 
-<!-- ========== 页脚片段：小组署名，并闭合 主列/布局 ========== -->
-<footer th:fragment="footer">
+<!-- ========== 页脚片段：小组署名 ========== -->
+<div th:fragment="footer">
     <div class="app-footer">
         © 2026 404 Not Found 小组 · 人事管理系统数据库课程设计
     </div>
 </div>
-</div>
-</footer>
 
 <!-- ========== 底部资源片段 ========== -->
 <div th:fragment="scripts">

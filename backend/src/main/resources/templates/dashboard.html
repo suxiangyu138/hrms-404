@@ -3,7 +3,10 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('首页','home')}"></head>
 <body>
-<header th:replace="~{fragments :: topbar('home')}"></header>
+<div class="layout">
+    <aside th:replace="~{fragments :: sidebar('home')}"></aside>
+    <div class="main-col">
+        <div th:replace="~{fragments :: topbar('home')}"></div>
 
 <main class="app-container">
     <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
@@ -44,7 +47,9 @@
     </div>
 </main>
 
-<footer th:replace="~{fragments :: footer}"></footer>
+        <div th:replace="~{fragments :: footer}"></div>
+    </div>
+</div>
 <div th:replace="~{fragments :: scripts}"></div>
 <div th:replace="~{fragments :: globalActions}"></div>
 <script>
