@@ -103,7 +103,7 @@
 <div th:replace="~{fragments :: globalActions}"></div>
 <script>
     const role = CTX.role;
-    let calMonth = new Date(), monthRows = [], myRecords = [];
+    let calMonth = new Date(), monthRows = [], myRecords = [], sumRows = [];
 
     function pad2(n) { return String(n).padStart(2, "0"); }
     const ymOf = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
@@ -194,6 +194,7 @@
     async function loadSummary() {
         const month = document.getElementById("sumMonth").value || monthNow();
         const rows = await api("/api/attendance/summary?month=" + month, { silent: true });
+        sumRows = rows || [];
         const body = document.getElementById("sumBody");
         if (!rows || !rows.length) {
             body.innerHTML = `<tr><td colspan="7"><div class="empty-404 m-3"><div class="big">404</div>
@@ -216,16 +217,22 @@
     }
 
     function exportSummary() {
+        if (!sumRows.length) return toast("暂无数据可导出", "error");
         const headers = [
-            { key: "a", label: "员工姓名" }, { key: "b", label: "部门" }, { key: "c", label: "出勤天数" },
-            { key: "d", label: "正常" }, { key: "e", label: "迟到" }, { key: "f", label: "早退" }, { key: "g", label: "正常出勤率" }
+            { key: "empName", label: "员工姓名" }, { key: "deptName", label: "部门" },
+            { key: "workDays", label: "出勤天数" }, { key: "normalCnt", label: "正常" },
+            { key: "lateCnt", label: "迟到" }, { key: "earlyCnt", label: "早退" },
+            { key: "rate", label: "正常出勤率" }
         ];
-        const rows = [...document.querySelectorAll("#sumBody tr")]
-            .filter(tr => !tr.innerHTML.includes("empty-404"))
-            .map(tr => {
-                const td = [...tr.children].map(x => x.textContent.trim());
-                return { a: td[0], b: td[1], c: td[2].replace(" 天", ""), d: td[3], e: td[4], f: td[5], g: td[6].replace("%", "") };
-            });
+        const rows = sumRows.map(r => ({
+            empName: r.empName,
+            deptName: r.deptName,
+            workDays: r.workDays,
+            normalCnt: r.normalCnt,
+            lateCnt: r.lateCnt,
+            earlyCnt: r.earlyCnt,
+            rate: Math.round(r.normalCnt * 100 / Math.max(1, r.workDays)) + "%"
+        }));
         exportCSV(`考勤汇总_${document.getElementById("sumMonth").value}.csv`, headers, rows);
         toast("已导出 CSV 文件");
     }

@@ -117,12 +117,15 @@ const empStatusBadge = s => s === 1
 /* ---------- CSV 导出 ---------- */
 function exportCSV(filename, headers, rows) {
     const escapeCell = v => {
-        const s = v === null || v === undefined ? "" : String(v);
+        let s = v === null || v === undefined ? "" : String(v);
+        // 防止 Excel 公式注入：以 = + - @ 开头的单元格加前导单引号并按文本处理
+        if (/^[=+\-@]/.test(s)) s = "'" + s;
         return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const lines = [headers.map(h => escapeCell(h.label)).join(",")];
     rows.forEach(r => lines.push(headers.map(h => escapeCell(r[h.key])).join(",")));
-    const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    // BOM 前缀保证 Excel 以 UTF-8 打开不乱码
+    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = filename;

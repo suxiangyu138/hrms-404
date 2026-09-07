@@ -150,7 +150,7 @@
 
     function exportResult() {
         if (!lastResult) return;
-        exportCSV(`AI查询结果_${Date.now().slice(0, 10)}.csv`,
+        exportCSV(`AI查询结果_${dateNow()}.csv`,
             lastResult.columns, lastResult.rows);
         toast("CSV 已导出");
     }
