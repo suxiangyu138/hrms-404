@@ -1,114 +1,232 @@
 -- =====================================================================
--- HRMS-404 人事管理系统  种子数据脚本
+-- HRMS-404 人事管理系统  种子数据脚本（中型公司规模：1000+ 员工）
 -- 需依次执行 01_schema.sql → 02_views.sql → 03_procs_triggers.sql → 04_seed.sql
+-- 数据规模：25 个部门（3 级树）· 52 个职位 · 1002 名员工（约 21 人离职）
+--           考勤约 2.4 万条（8 月 21 个工作日 + 9 月 4 个工作日）
+--           薪资由存储过程按 8 月/9 月批量生成
 -- 默认登录账号见文末注释
 -- =====================================================================
 USE hrms_db;
+SET SESSION cte_max_recursion_depth = 5000;
 
--- ---------- 部门（3 级树：总公司 → 部门 → 小组） ----------
+-- =====================================================================
+-- 一、部门（3 级组织树：总公司 → 中心/部门 → 小组）
+-- =====================================================================
 INSERT INTO department (dept_id, dept_name, parent_id, headcount_budget) VALUES
-(1, '总公司',       NULL, 200),
-(2, '研发部',       1,    60),
-(3, '市场部',       1,    40),
-(4, '人事部',       1,    20),
-(5, '财务部',       1,    15),
-(6, '销售部',       1,    40),
-(7, '研发一组',     2,    25),
-(8, '研发二组',     2,    25);
+(1,  '总公司',     NULL, 1200),
+(2,  '研发中心',   1,    380),
+(3,  '市场部',     1,    60),
+(4,  '人事部',     1,    40),
+(5,  '财务部',     1,    35),
+(6,  '销售中心',   1,    210),
+(7,  '研发一组',   2,    110),
+(8,  '研发二组',   2,    110),
+(9,  '研发三组',   2,    110),
+(10, '架构组',     2,    40),
+(11, '产品部',     1,    90),
+(12, '销售一部',   6,    75),
+(13, '销售二部',   6,    75),
+(14, '渠道部',     6,    50),
+(15, '客服一部',   1,    90),
+(16, '客服二部',   1,    90),
+(17, '行政部',     1,    30),
+(18, '法务部',     1,    15),
+(19, 'IT运维部',   1,    40),
+(20, '质量保障部', 1,    45),
+(21, '数据部',     1,    30),
+(22, '大客户部',   1,    40),
+(23, '海外业务部', 1,    35),
+(24, '仓储部',     1,    45),
+(25, '电商部',     1,    55);
 
--- ---------- 职位 ----------
+-- =====================================================================
+-- 二、职位（52 个，编制数总和受各部门编制预算约束，全部通过触发器校验）
+-- =====================================================================
 INSERT INTO position (position_id, position_name, dept_id, headcount, base_salary) VALUES
-(1,  '研发经理',   2,  2,  18000.00),
-(2,  '高级工程师', 7,  8,  12000.00),
-(3,  '工程师',     7,  15, 9000.00),
-(4,  '高级工程师', 8,  8,  12000.00),
-(5,  '工程师',     8,  15, 9000.00),
-(6,  '市场专员',   3,  30, 7000.00),
-(7,  '人事专员',   4,  12, 6500.00),
-(8,  '会计',       5,  8,  7500.00),
-(9,  '销售经理',   6,  1,  14000.00),
-(10, '销售专员',   6,  25, 6000.00);
+(1,  '研发经理',    7,  3,  22000.00),
+(2,  '高级工程师',  7,  35, 16000.00),
+(3,  '工程师',      7,  50, 11000.00),
+(4,  '测试工程师',  7,  18, 9500.00),
+(5,  '高级工程师',  8,  35, 16000.00),
+(6,  '工程师',      8,  50, 11000.00),
+(7,  '测试工程师',  8,  15, 9500.00),
+(8,  '研发经理',    9,  3,  22000.00),
+(9,  '高级工程师',  9,  40, 16000.00),
+(10, '工程师',      9,  48, 11000.00),
+(11, '架构师',      10, 8,  30000.00),
+(12, '高级工程师',  10, 18, 16000.00),
+(13, '产品经理',    11, 12, 18000.00),
+(14, '产品专员',    11, 40, 10000.00),
+(15, 'UI设计师',    11, 15, 11000.00),
+(16, '市场经理',    3,  4,  15000.00),
+(17, '市场专员',    3,  40, 8000.00),
+(18, '品牌专员',    3,  10, 9000.00),
+(19, '销售经理',    12, 4,  18000.00),
+(20, '销售专员',    12, 60, 7000.00),
+(21, '销售经理',    13, 4,  18000.00),
+(22, '销售专员',    13, 60, 7000.00),
+(23, '渠道经理',    14, 3,  16000.00),
+(24, '渠道专员',    14, 40, 7500.00),
+(25, '客服主管',    15, 4,  9000.00),
+(26, '客服专员',    15, 80, 6000.00),
+(27, '客服主管',    16, 4,  9000.00),
+(28, '客服专员',    16, 80, 6000.00),
+(29, '人事经理',    4,  3,  16000.00),
+(30, '人事专员',    4,  25, 8500.00),
+(31, '招聘专员',    4,  8,  8000.00),
+(32, '财务经理',    5,  2,  17000.00),
+(33, '会计',        5,  15, 9000.00),
+(34, '出纳',        5,  8,  7000.00),
+(35, '行政经理',    17, 2,  14000.00),
+(36, '行政专员',    17, 18, 6500.00),
+(37, '法务专员',    18, 8,  10000.00),
+(38, '运维经理',    19, 2,  16000.00),
+(39, '运维工程师',  19, 20, 10000.00),
+(40, '网络工程师',  19, 8,  9500.00),
+(41, '测试经理',    20, 2,  17000.00),
+(42, '测试工程师',  20, 30, 9500.00),
+(43, '数据工程师',  21, 15, 14000.00),
+(44, '数据分析师',  21, 8,  12000.00),
+(45, '大客户经理',  22, 4,  18000.00),
+(46, '大客户专员',  22, 30, 9000.00),
+(47, '海外业务经理', 23, 3, 18000.00),
+(48, '海外业务专员', 23, 25, 10000.00),
+(49, '仓储主管',    24, 3,  11000.00),
+(50, '仓储专员',    24, 35, 6500.00),
+(51, '电商运营专员', 25, 40, 9000.00),
+(52, '电商美工',    25, 8,  8000.00);
 
--- ---------- 员工（15 人：14 在职 + 1 演示离职） ----------
-INSERT INTO employee (emp_id, emp_no, emp_name, gender, birth_date, phone, email, hire_date, dept_id, position_id, status) VALUES
-(1,  'E001', '张伟', '男', '1995-03-12', '13800000001', 'zhangwei@hrms404.com', '2020-06-15', 7, 2, 1),
-(2,  'E002', '李娜', '女', '1998-07-21', '13800000002', 'lina@hrms404.com',    '2021-09-01', 7, 3, 1),
-(3,  'E003', '王强', '男', '1996-11-03', '13800000003', 'wangqiang@hrms404.com','2020-08-10', 7, 3, 1),
-(4,  'E004', '赵敏', '女', '1994-05-18', '13800000004', 'zhaomin@hrms404.com', '2019-04-22', 8, 4, 1),
-(5,  'E005', '刘洋', '男', '1999-01-29', '13800000005', 'liuyang@hrms404.com', '2022-03-14', 8, 5, 1),
-(6,  'E006', '陈静', '女', '1997-09-08', '13800000006', 'chenjing@hrms404.com','2021-07-19', 3, 6, 1),
-(7,  'E007', '杨帆', '男', '1995-12-25', '13800000007', 'yangfan@hrms404.com', '2020-10-12', 3, 6, 1),
-(8,  'E008', '黄丽', '女', '1993-02-14', '13800000008', 'huangli@hrms404.com', '2018-09-03', 4, 7, 1),
-(9,  'E009', '周杰', '男', '1996-08-30', '13800000009', 'zhoujie@hrms404.com', '2020-05-06', 4, 7, 1),
-(10, 'E010', '吴倩', '女', '1997-04-17', '13800000010', 'wuqian@hrms404.com', '2021-11-01', 5, 8, 1),
-(11, 'E011', '郑浩', '男', '1992-10-09', '13800000011', 'zhenghao@hrms404.com','2017-03-20', 5, 8, 1),
-(12, 'E012', '孙琳', '女', '1999-06-23', '13800000012', 'sunlin@hrms404.com', '2022-08-08', 6, 10, 1),
-(13, 'E013', '马超', '男', '1998-02-27', '13800000013', 'machao@hrms404.com', '2021-02-22', 6, 10, 1),
-(14, 'E014', '林芳', '女', '1991-12-01', '13800000014', 'linfang@hrms404.com', '2016-08-15', 6, 9, 1),
-(15, 'E015', '陈晨', '男', '1996-05-05', '13800000015', 'chenchen@hrms404.com','2020-01-13', 4, 7, 1);
--- E015 通过 UPDATE 走"离职触发器"路径（自动禁用其账号），与真实业务一致
-UPDATE employee SET status = 0 WHERE emp_id = 15;
+-- =====================================================================
+-- 三、员工（1002 人，递归 CTE 批量生成，入职触发器自动按工号创建账号）
+--     按"职位槽位计划"分配：每个职位的目标人数，编号按职位顺序连续
+-- =====================================================================
+DROP TEMPORARY TABLE IF EXISTS slot_plan;
+CREATE TEMPORARY TABLE slot_plan (position_id INT PRIMARY KEY, cnt INT);
+INSERT INTO slot_plan VALUES
+(1,3),(2,32),(3,45),(4,15),
+(5,32),(6,45),(7,13),
+(8,3),(9,35),(10,42),
+(11,7),(12,15),
+(13,10),(14,34),(15,12),
+(16,4),(17,35),(18,8),
+(19,4),(20,55),
+(21,4),(22,55),
+(23,3),(24,36),
+(25,4),(26,80),
+(27,4),(28,80),
+(29,3),(30,22),(31,7),
+(32,2),(33,13),(34,7),
+(35,2),(36,16),
+(37,7),
+(38,2),(39,17),(40,7),
+(41,2),(42,26),
+(43,13),(44,7),
+(45,4),(46,27),
+(47,3),(48,22),
+(49,3),(50,32),
+(51,36),(52,7);
 
--- ---------- 考勤（8 月、9 月工作日自动生成，含迟到/早退示例） ----------
-INSERT INTO attendance (emp_id, work_date, check_in_time, check_out_time, status)
-SELECT e.emp_id,
-       wk.work_date,
-       TIMESTAMP(wk.work_date, '08:55:00'),
-       TIMESTAMP(wk.work_date, '18:05:00'),
+INSERT INTO employee (emp_no, emp_name, gender, birth_date, phone, email, hire_date, dept_id, position_id, status)
+WITH RECURSIVE nums AS (
+    SELECT 1 AS n
+    UNION ALL
+    SELECT n + 1 FROM nums WHERE n < 1002
+),
+slots AS (
+    SELECT sp.position_id, p.dept_id,
+           COALESCE(SUM(sp.cnt) OVER (ORDER BY sp.position_id ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) + 1 AS start_n,
+           SUM(sp.cnt) OVER (ORDER BY sp.position_id) AS end_n
+    FROM slot_plan sp
+             JOIN position p ON p.position_id = sp.position_id
+)
+SELECT CONCAT('E', LPAD(n.n, 4, '0')),
+       CONCAT(ELT(1 + FLOOR(RAND() * 20), '张','李','王','刘','陈','杨','赵','黄','周','吴','徐','孙','胡','朱','高','林','何','郭','马','罗'),
+              ELT(1 + FLOOR(RAND() * 30), '伟','娜','强','敏','洋','静','帆','丽','杰','倩','磊','婷','军','雪','涛','娟','鹏','慧','晨','悦','宇','欣','浩','琳','轩','梅','博','丹','俊','颖')),
+       IF(RAND() < 0.47, '男', '女'),
+       DATE_ADD('1975-01-01', INTERVAL FLOOR(RAND() * 10000) DAY),
+       CONCAT('137', LPAD(n.n, 8, '0')),
+       CONCAT('emp', n.n, '@hrms404.com'),
+       DATE_ADD('2005-01-01', INTERVAL FLOOR(RAND() * 7800) DAY),
+       s.dept_id,
+       s.position_id,
        1
-FROM employee e
-         JOIN (WITH RECURSIVE weekdays AS (
-                 SELECT '2026-08-03' AS work_date
-                 UNION ALL
-                 SELECT DATE_ADD(work_date, INTERVAL 1 DAY) FROM weekdays WHERE work_date < '2026-08-31')
-               SELECT work_date FROM weekdays WHERE WEEKDAY(work_date) < 5) wk
-              ON e.status = 1
-ORDER BY e.emp_id, wk.work_date;
+FROM nums n
+         JOIN slots s ON n.n BETWEEN s.start_n AND s.end_n;
 
-INSERT INTO attendance (emp_id, work_date, check_in_time, check_out_time, status)
-SELECT e.emp_id,
-       wk.work_date,
-       TIMESTAMP(wk.work_date, '08:55:00'),
-       TIMESTAMP(wk.work_date, '18:05:00'),
-       1
-FROM employee e
-         JOIN (WITH RECURSIVE weekdays AS (
-                 SELECT '2026-09-01' AS work_date
-                 UNION ALL
-                 SELECT DATE_ADD(work_date, INTERVAL 1 DAY) FROM weekdays WHERE work_date < '2026-09-30')
-               SELECT work_date FROM weekdays WHERE WEEKDAY(work_date) < 5) wk
-              ON e.status = 1 AND e.emp_id <> 15
-WHERE wk.work_date <= '2026-09-04';   -- 本月数据到上周为止，今天起可演示"打卡"
+-- 离职约 2%（21 人）：走 UPDATE 离职路径，触发器自动禁用其登录账号
+UPDATE employee SET status = 0 WHERE emp_id % 47 = 0;
 
--- 迟到示例：王强 9-02 / 陈静 8-05
-UPDATE attendance SET check_in_time = '2026-09-02 09:15:00', status = 2 WHERE emp_id = 3  AND work_date = '2026-09-02';
-UPDATE attendance SET check_in_time = '2026-08-05 09:22:00', status = 2 WHERE emp_id = 6  AND work_date = '2026-08-05';
--- 早退示例：孙琳 9-03 / 马超 8-06
-UPDATE attendance SET check_out_time = '2026-09-03 17:20:00', status = 3 WHERE emp_id = 12 AND work_date = '2026-09-03';
-UPDATE attendance SET check_out_time = '2026-08-06 17:10:00', status = 3 WHERE emp_id = 13 AND work_date = '2026-08-06';
--- 迟到+早退示例：刘洋 9-04 / 郑浩 8-10
-UPDATE attendance SET check_in_time = '2026-09-04 09:18:00', check_out_time = '2026-09-04 17:10:00', status = 4
-WHERE emp_id = 5 AND work_date = '2026-09-04';
-UPDATE attendance SET check_in_time = '2026-08-10 09:12:00', check_out_time = '2026-08-10 17:05:00', status = 4
-WHERE emp_id = 11 AND work_date = '2026-08-10';
-
--- ---------- 用户（触发器已为全部员工按工号建号：E001~E015，密码 123456） ----------
--- 密码统一：123456，存储 MD5('404n0tf0und123456') = 4a52b964ffd064171ff2c44773bd13a2
--- 1) 管理员账号（不绑定员工）
+-- =====================================================================
+-- 四、用户（触发器已为 1002 名员工按工号建号；以下设置演示特权账号）
+--     密码统一：123456，存储 MD5('404n0tf0und123456') = 4a52b964ffd064171ff2c44773bd13a2
+-- =====================================================================
 INSERT INTO sys_user (emp_id, username, password, role_code) VALUES
 (NULL, 'admin', '4a52b964ffd064171ff2c44773bd13a2', 'ADMIN');
--- 2) 特殊角色账号：直接把触发器生成的员工账号改名为业务账号（演示离职禁用仍生效）
-UPDATE sys_user SET username = 'hr01',      role_code = 'HR'       WHERE emp_id = 8;
-UPDATE sys_user SET username = 'manager01', role_code = 'MANAGER'  WHERE emp_id = 14;
 
--- ---------- 薪资（调用存储过程生成 8 月历史 + 9 月预览） ----------
+-- 特殊角色账号：把触发器生成的员工账号改名为业务账号（离职禁用逻辑仍生效）
+UPDATE sys_user SET username = 'hr01',      role_code = 'HR'      WHERE emp_id = (SELECT MIN(emp_id) FROM employee WHERE position_id = 30);
+UPDATE sys_user SET username = 'manager01', role_code = 'MANAGER' WHERE emp_id = (SELECT MIN(emp_id) FROM employee WHERE position_id = 19);
+
+-- =====================================================================
+-- 五、考勤（在职员工）：8 月 21 个工作日 + 9 月 4 个工作日
+--     状态随机分布：约 94% 正常、6% 迟到/早退/迟到且早退；
+--     时间与状态联动生成，保证逻辑一致
+-- =====================================================================
+INSERT INTO attendance (emp_id, work_date, check_in_time, check_out_time, status)
+WITH RECURSIVE weekdays AS (
+    SELECT '2026-08-03' AS work_date
+    UNION ALL
+    SELECT DATE_ADD(work_date, INTERVAL 1 DAY) FROM weekdays WHERE work_date < '2026-08-31'
+)
+SELECT t.emp_id, t.work_date,
+       IF(t.st IN (2, 4),
+          TIMESTAMP(t.work_date, SEC_TO_TIME(32400 + FLOOR(RAND() * 2400))),   -- 9:00~9:40 迟到
+          TIMESTAMP(t.work_date, SEC_TO_TIME(30000 + FLOOR(RAND() * 2280)))),  -- 8:20~8:58 正常
+       IF(t.st IN (3, 4),
+          TIMESTAMP(t.work_date, SEC_TO_TIME(60600 + FLOOR(RAND() * 4140))),   -- 16:50~17:59 早退
+          TIMESTAMP(t.work_date, SEC_TO_TIME(63000 + FLOOR(RAND() * 4200)))),  -- 17:30~18:40 正常
+       t.st
+FROM (
+    SELECT e.emp_id, wk.work_date,
+           IF(RAND() < 0.94, 1, ELT(1 + FLOOR(RAND() * 3), 2, 3, 4)) AS st
+    FROM employee e
+             JOIN (SELECT work_date FROM weekdays WHERE WEEKDAY(work_date) < 5) wk
+    WHERE e.status = 1
+) t;
+
+INSERT INTO attendance (emp_id, work_date, check_in_time, check_out_time, status)
+WITH RECURSIVE weekdays AS (
+    SELECT '2026-09-01' AS work_date
+    UNION ALL
+    SELECT DATE_ADD(work_date, INTERVAL 1 DAY) FROM weekdays WHERE work_date < '2026-09-04'
+)
+SELECT t.emp_id, t.work_date,
+       IF(t.st IN (2, 4),
+          TIMESTAMP(t.work_date, SEC_TO_TIME(32400 + FLOOR(RAND() * 2400))),
+          TIMESTAMP(t.work_date, SEC_TO_TIME(30000 + FLOOR(RAND() * 2280)))),
+       IF(t.st IN (3, 4),
+          TIMESTAMP(t.work_date, SEC_TO_TIME(60600 + FLOOR(RAND() * 4140))),
+          TIMESTAMP(t.work_date, SEC_TO_TIME(63000 + FLOOR(RAND() * 4200)))),
+       t.st
+FROM (
+    SELECT e.emp_id, wk.work_date,
+           IF(RAND() < 0.94, 1, ELT(1 + FLOOR(RAND() * 3), 2, 3, 4)) AS st
+    FROM employee e
+             JOIN (SELECT work_date FROM weekdays WHERE WEEKDAY(work_date) < 5) wk
+    WHERE e.status = 1
+) t;
+
+-- =====================================================================
+-- 六、薪资：调用存储过程为在职员工批量生成 8 月/9 月薪资（幂等，触发器算实发）
+-- =====================================================================
 CALL sp_generate_monthly_salary('2026-08');
 CALL sp_generate_monthly_salary('2026-09');
 
 -- =====================================================================
 -- 演示账号（密码均为 123456）：
 --   admin     系统管理员（所有功能）
---   hr01      人事专员黄丽（员工/部门/职位/考勤/薪资管理）
---   manager01 销售经理林芳（仅查看销售部员工与数据）
---   E008/E001... 任意在职员工的工号即登录名（普通员工，我的/打卡）
+--   hr01      人事专员（绑定人事部某人事专员员工）
+--   manager01 销售经理（绑定销售一部某销售经理，数据范围=销售一部及子部门）
+--   E0001~E1002  任意在职员工的工号即登录名（普通员工：打卡/我的中心）
+--   （离职员工账号已被触发器自动禁用，可演示登录被拒绝）
 -- =====================================================================
