@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<!-- HRMS-404 · 小组特征元素主舞台：自定义 404 错误页 -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>404 · 页面不存在 · HRMS-404</title>
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/hrms.css}">
+</head>
+<body class="d-flex align-items-center justify-content-center" style="min-height:100vh;background:radial-gradient(900px 400px at 50% -10%,#312e81 0%,transparent 60%),#0f172a">
+    <div class="text-center text-white px-3">
+        <div class="display-1 fw-bolder" style="color:#e11d48;letter-spacing:4px;text-shadow:0 0 40px rgba(225,29,72,.45)">404</div>
+        <div class="h5 mt-2 mb-4" style="letter-spacing:2px">NOT FOUND</div>
+        <p class="text-white-50 mb-1">你要找的页面不存在，已被按“离职”流程处理 👋</p>
+        <p class="text-white-50 small mb-4">也许它迟到早退去了别的部门（目录），或者压根没来打过卡。</p>
+        <a class="btn px-4 py-2 fw-semibold" th:href="@{/}"
+           style="background:#e11d48;color:#fff;border:0">返回首页</a>
+        <div class="mt-5 small text-white-50">© 2026 404 Not Found 小组 · 人事管理系统数据库课程设计 · HRMS-404</div>
+    </div>
+</body>
+</html>

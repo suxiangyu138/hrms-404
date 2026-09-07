@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<!-- HRMS-404 职位管理 -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('职位管理','positions')}"></head>
+<body>
+<header th:replace="~{fragments :: topbar('positions')}"></header>
+
+<main class="app-container">
+    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <div>
+            <h1 class="page-title">职位管理</h1>
+            <div class="page-sub">编制数受部门预算上限约束（触发器 trg_check_budget）——超出会收到 409 报错</div>
+        </div>
+        <div class="ms-auto">
+            <button class="btn btn-sm px-3" style="background:#e11d48;color:#fff;border:0" onclick="openPos()">＋ 新增职位</button>
+        </div>
+    </div>
+
+    <div class="card card-panel table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr>
+                    <th>职位</th><th>所属部门</th><th>编制数</th><th>在职占用</th><th>编制利用率</th>
+                    <th class="text-end">岗位基本工资</th><th class="text-end">操作</th>
+                </tr></thead>
+                <tbody id="posBody"></tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<div class="modal fade" id="posModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="posModalTitle">新增职位</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="fPosId">
+                <div class="mb-3">
+                    <label class="form-label small">所属部门 *</label>
+                    <select class="form-select" id="fDept"></select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small">职位名称 *</label>
+                    <input class="form-control" id="fName" maxlength="50" placeholder="如 测试工程师">
+                </div>
+                <div class="row g-3 mb-1">
+                    <div class="col-6">
+                        <label class="form-label small">编制数 *</label>
+                        <input type="number" min="1" class="form-control" id="fHeadcount" value="1">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">岗位基本工资（元/月）*</label>
+                        <input type="number" min="0" step="100" class="form-control" id="fSalary" placeholder="9000">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn px-4" style="background:#e11d48;color:#fff;border:0" onclick="savePos()">保 存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+<div th:replace="~{fragments :: scripts}"></div>
+<div th:replace="~{fragments :: globalActions}"></div>
+<script>
+    let list = [], tree = [];
+
+    async function load() {
+        const [pos, dept] = await Promise.all([
+            api("/api/positions", { silent: true }),
+            api("/api/departments/tree", { silent: true })
+        ]);
+        if (pos === null) return;
+        list = pos || [];
+        tree = dept ? dept.tree : [];
+        const deptName = id => tree.find(n => n.deptId === id)?.deptName ?? "-";
+        const body = document.getElementById("posBody");
+        if (!list.length) {
+            body.innerHTML = `<tr><td colspan="7">${empty404("404：暂无职位，去新增一个吧")}</td></tr>`;
+            return;
+        }
+        body.innerHTML = list.map(p => {
+            const rate = p.headcount ? Math.min(100, Math.round((p.usedCount ?? 0) * 100 / p.headcount)) : 0;
+            const over = (p.usedCount ?? 0) > p.headcount;
+            return `
+            <tr>
+              <td><b>${esc(p.positionName)}</b></td>
+              <td>${esc(deptName(p.deptId))}</td>
+              <td>${p.headcount}</td>
+              <td>${p.usedCount ?? 0}</td>
+              <td style="min-width:150px">
+                <div class="progress" style="height:6px">
+                  <div class="progress-bar ${over ? 'bg-danger' : rate > 85 ? 'bg-warning' : 'bg-success'}"
+                       style="width:${rate}%"></div>
+                </div>
+                <span class="small text-secondary">${rate}%${over ? ' <span class="text-danger">超编！</span>' : ''}</span>
+              </td>
+              <td class="text-end">¥ ${money(p.baseSalary)}</td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-primary" onclick="editPos(${p.positionId})">编辑</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="delPos(${p.positionId},'${esc(p.positionName)}')">删除</button>
+              </td>
+            </tr>`;
+        }).join("");
+    }
+
+    function fillDept() {
+        const sel = document.getElementById("fDept");
+        sel.innerHTML = '<option value="">-- 选择部门 --</option>'
+            + tree.map(n => `<option value="${n.deptId}">${esc(n.deptPath)}（预算 ${n.headcountBudget ?? "不限"}）</option>`).join("");
+    }
+
+    function openPos() {
+        document.getElementById("posModalTitle").textContent = "新增职位";
+        document.getElementById("fPosId").value = "";
+        document.getElementById("fName").value = "";
+        document.getElementById("fHeadcount").value = 1;
+        document.getElementById("fSalary").value = "";
+        fillDept();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("posModal")).show();
+    }
+
+    function editPos(id) {
+        const p = list.find(x => x.positionId === id);
+        document.getElementById("posModalTitle").textContent = "编辑职位 · " + p.positionName;
+        document.getElementById("fPosId").value = id;
+        document.getElementById("fName").value = p.positionName;
+        document.getElementById("fHeadcount").value = p.headcount;
+        document.getElementById("fSalary").value = p.baseSalary;
+        fillDept();
+        document.getElementById("fDept").value = p.deptId;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("posModal")).show();
+    }
+
+    async function savePos() {
+        const id = document.getElementById("fPosId").value;
+        const body = {
+            positionName: document.getElementById("fName").value.trim(),
+            deptId: Number(document.getElementById("fDept").value),
+            headcount: Number(document.getElementById("fHeadcount").value),
+            baseSalary: Number(document.getElementById("fSalary").value)
+        };
+        if (!body.positionName || !body.deptId) return toast("请填写职位名称并选择部门", "error");
+        if (!(body.headcount > 0)) return toast("编制数必须为正整数", "error");
+        const r = await api(id ? `/api/positions/${id}` : "/api/positions",
+            { method: id ? "PUT" : "POST", body: JSON.stringify(body) });
+        if (r !== null) { toast("保存成功（已通过编制预算触发器校验）"); hideModal("posModal"); load(); }
+    }
+
+    async function delPos(id, name) {
+        if (!await confirmDlg(`确认删除职位【${name}】？该职位下仍有在职员工时无法删除。`)) return;
+        const r = await api("/api/positions/" + id, { method: "DELETE" });
+        if (r !== null) { toast("职位已删除"); load(); }
+    }
+
+    load();
+</script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+/* =====================================================================
+   HRMS-404 人事管理系统 · 自定义样式（404 Not Found 小组）
+   ===================================================================== */
+:root {
+    --hrms-ink: #1d2733;
+    --hrms-404: #e11d48;
+    --hrms-bg: #f2f4f8;
+}
+
+body {
+    background: var(--hrms-bg);
+    color: var(--hrms-ink);
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+}
+
+/* ---------- 顶栏 ---------- */
+.navbar-hrms {
+    background: #fff;
+    box-shadow: 0 1px 6px rgba(16, 24, 40, .08);
+}
+.brand-404 {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #e11d48, #be123c);
+    color: #fff;
+    font-weight: 800;
+    font-size: .95rem;
+    letter-spacing: -.5px;
+    box-shadow: 0 2px 6px rgba(225, 29, 72, .35);
+}
+.role-badge {
+    background: #eef2ff;
+    color: #4338ca;
+    border-radius: 999px;
+    font-size: .72rem;
+    padding: .2rem .6rem;
+}
+.navbar-hrms .nav-link { color: #475569; font-size: .92rem; padding-inline: .8rem; }
+.navbar-hrms .nav-link:hover { color: var(--hrms-404); }
+.navbar-hrms .nav-link.active { color: var(--hrms-404); font-weight: 600; }
+
+/* ---------- 布局 ---------- */
+.app-container { padding: 1.25rem 1.4rem 4rem; }
+.app-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #fff;
+    border-top: 1px solid #e8ecf2;
+    text-align: center;
+    padding: .45rem 0;
+    font-size: .78rem;
+    color: #94a3b8;
+    z-index: 1030;
+}
+.page-title { font-size: 1.15rem; font-weight: 700; margin: 0; }
+.page-sub { color: #64748b; font-size: .85rem; }
+
+/* ---------- 面板 / 表格 ---------- */
+.card-panel {
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+}
+.table-card thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: .8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.table-card td { vertical-align: middle; font-size: .88rem; }
+.status-pill { display: inline-block; padding: .15rem .55rem; border-radius: 999px; font-size: .75rem; }
+.st-on { background: #dcfce7; color: #15803d; }
+.st-off { background: #fee2e2; color: #b91c1c; }
+.st-badge { display: inline-block; padding: .1rem .5rem; border-radius: 6px; font-size: .75rem; }
+.st-normal { background: #dcfce7; color: #15803d; }
+.st-late { background: #fef9c3; color: #a16207; }
+.st-early { background: #ffe4e6; color: #be123c; }
+.st-none { background: #e2e8f0; color: #475569; }
+
+/* ---------- 空数据 404 占位 ---------- */
+.empty-404 {
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 12px;
+    background: #fff;
+    text-align: center;
+    color: #94a3b8;
+    padding: 2.2rem 1rem;
+}
+.empty-404 .big { font-size: 2rem; font-weight: 800; color: #cbd5e1; letter-spacing: 2px; }
+
+/* ---------- 登录页 ---------- */
+.login-bg {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(1200px 500px at 20% -10%, #312e81 0%, transparent 55%),
+    radial-gradient(1000px 600px at 110% 110%, #831843 0%, transparent 50%), #0f172a;
+}
+.login-card { width: 380px; border: 0; border-radius: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, .35); }
+.login-brand { text-align: center; margin-bottom: 1.2rem; }
+.login-hint { font-size: .78rem; color: #94a3b8; }
+
+/* ---------- SQL 结果 ---------- */
+.sql-pre {
+    background: #0f172a;
+    color: #a5f3fc;
+    border-radius: 10px;
+    font-size: .82rem;
+    padding: .9rem 1rem;
+    white-space: pre-wrap;
+}
+.stat-num { font-size: 1.5rem; font-weight: 800; }
+.card-stat .card-body { padding: 1rem 1.1rem; }
+.copy-btn { cursor: pointer; }
+
+/* ---------- 部门树 ---------- */
+.dept-row { cursor: default; }
+.tree-actions button { opacity: 0; transition: opacity .12s; }
+.dept-row:hover .tree-actions button { opacity: 1; }
+.dept-depth { color: #cbd5e1; font-family: monospace; }
+
+/* 提示浮层 */
+#toastHost { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 2000; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.hrms-toast { background: #0f172a; color: #fff; padding: .55rem 1rem; border-radius: 10px; font-size: .85rem; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); animation: toastIn .2s ease-out; max-width: 70vw; }
+.hrms-toast.err { background: #b91c1c; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }

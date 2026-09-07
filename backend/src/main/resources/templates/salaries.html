@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<!-- HRMS-404 薪资管理 -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('薪资管理','salaries')}"></head>
+<body>
+<header th:replace="~{fragments :: topbar('salaries')}"></header>
+
+<main class="app-container">
+    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <div>
+            <h1 class="page-title">薪资管理</h1>
+            <div class="page-sub">按月生成由存储过程 <code>sp_generate_monthly_salary</code> 完成（幂等）；实发工资 = 基本 + 绩效 − 扣款（触发器计算）</div>
+        </div>
+        <div class="ms-auto d-flex gap-2 flex-wrap">
+            <select class="form-select form-select-sm" id="monthSel" style="min-width:150px"></select>
+            <button class="btn btn-sm px-3" style="background:#e11d48;color:#fff;border:0" onclick="generateMonth()">⚙ 生成当月薪资</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="exportSalary()">导出 CSV</button>
+        </div>
+    </div>
+
+    <div class="card card-panel table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr>
+                    <th>工号</th><th>姓名</th><th>部门</th><th>基本工资</th>
+                    <th>绩效</th><th>扣款</th><th>实发工资</th><th>生成时间</th><th class="text-end">操作</th>
+                </tr></thead>
+                <tbody id="salBody"></tbody>
+            </table>
+        </div>
+        <div class="card-body border-top d-flex justify-content-between align-items-center">
+            <span class="text-secondary small">💡 生成按钮幂等：已生成的月份再次点击不会产生重复记录；若 AI 想搞事，扣款就是它被 404 的那条。</span>
+            <span class="fw-semibold" id="salTotal"></span>
+        </div>
+    </div>
+</main>
+
+<!-- 调整弹窗 -->
+<div class="modal fade" id="adjModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold" id="adjTitle">调整薪资</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <input type="hidden" id="adjId">
+                <div class="mb-3"><label class="form-label small">绩效奖金</label>
+                    <input type="number" min="0" step="50" class="form-control" id="adjPerf"></div>
+                <div class="mb-1"><label class="form-label small">扣款</label>
+                    <input type="number" min="0" step="10" class="form-control" id="adjDed"></div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn px-4" style="background:#e11d48;color:#fff;border:0" onclick="saveAdj()">保 存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+<div th:replace="~{fragments :: scripts}"></div>
+<div th:replace="~{fragments :: globalActions}"></div>
+<script>
+    let monthList = [];
+
+    async function loadMonths(select) {
+        const months = await api("/api/salaries/months", { silent: true });
+        if (!months) return false;
+        monthList = months;
+        const sel = document.getElementById("monthSel");
+        sel.innerHTML = months.map(m => `<option value="${m}" ${m === monthNow() ? "selected" : ""}>${m}</option>`).join("");
+        return true;
+    }
+
+    async function loadSalary() {
+        const month = document.getElementById("monthSel").value;
+        const rows = await api("/api/salaries?month=" + month, { silent: true });
+        const body = document.getElementById("salBody");
+        if (!rows || !rows.length) {
+            body.innerHTML = `<tr><td colspan="9">${empty404(`404：${month} 尚未生成薪资，点击右上角「生成当月薪资」调用存储过程`)}</td></tr>`;
+            document.getElementById("salTotal").textContent = "";
+            return;
+        }
+        let total = 0;
+        body.innerHTML = rows.map(r => {
+            total += Number(r.actualSalary || 0);
+            return `<tr>
+              <td><b>${esc(r.empNo)}</b></td>
+              <td>${esc(r.empName)}</td>
+              <td>${esc(r.deptName)}</td>
+              <td>¥ ${money(r.baseSalary)}</td>
+              <td>¥ ${money(r.performance)}</td>
+              <td class="${Number(r.deduction) > 0 ? "text-danger" : ""}">¥ ${money(r.deduction)}</td>
+              <td><b>¥ ${money(r.actualSalary)}</b></td>
+              <td class="text-secondary small">${esc(fmtDateTime(r.createdAt))}</td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-primary" onclick="openAdj(${r.salaryId},'${esc(r.empName)}',${r.performance},${r.deduction})">调整</button>
+              </td>
+            </tr>`;
+        }).join("");
+        document.getElementById("salTotal").textContent = `${month} 合计实发 ¥ ${money(total)}（${rows.length} 人）`;
+    }
+
+    async function generateMonth() {
+        const month = document.getElementById("monthSel").value;
+        const r = await api("/api/salaries/generate", { method: "POST", body: JSON.stringify({ month }) });
+        if (r !== null) loadSalary();
+    }
+
+    function openAdj(id, name, perf, ded) {
+        document.getElementById("adjId").value = id;
+        document.getElementById("adjTitle").textContent = `调整 · ${name}`;
+        document.getElementById("adjPerf").value = perf;
+        document.getElementById("adjDed").value = ded;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("adjModal")).show();
+    }
+
+    async function saveAdj() {
+        const id = document.getElementById("adjId").value;
+        const r = await api("/api/salaries/" + id, {
+            method: "PUT",
+            body: JSON.stringify({
+                performance: Number(document.getElementById("adjPerf").value || 0),
+                deduction: Number(document.getElementById("adjDed").value || 0)
+            })
+        });
+        if (r !== null) { toast("调整成功（实发已重算）"); hideModal("adjModal"); loadSalary(); }
+    }
+
+    function exportSalary() {
+        const rows = [...document.querySelectorAll("#salBody tr")]
+            .filter(tr => !tr.innerHTML.includes("empty-404"))
+            .map(tr => ({ k: [...tr.children].map(x => x.textContent.trim().replace(/[¥\s]/g, "")) }));
+        exportCSV(`薪资_${document.getElementById("monthSel").value}.csv`,
+            [{ key: "a", label: "工号" }, { key: "b", label: "姓名" }, { key: "c", label: "部门" }, { key: "d", label: "基本工资" },
+                { key: "e", label: "绩效" }, { key: "f", label: "扣款" }, { key: "g", label: "实发" }, { key: "h", label: "生成时间" }],
+            rows.map(r => ({ a: r.k[0], b: r.k[1], c: r.k[2], d: r.k[3], e: r.k[4], f: r.k[5], g: r.k[6], h: r.k[7] })));
+        toast("CSV 已导出");
+    }
+
+    (async () => {
+        await loadMonths();
+        await loadSalary();
+        document.getElementById("monthSel").addEventListener("change", loadSalary);
+    })();
+</script>
+</body>
+</html>

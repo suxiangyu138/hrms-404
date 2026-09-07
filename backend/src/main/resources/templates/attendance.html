@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<!-- HRMS-404 考勤打卡 -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('考勤打卡','attendance')}"></head>
+<body>
+<header th:replace="~{fragments :: topbar('attendance')}"></header>
+
+<main class="app-container">
+    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <div>
+            <h1 class="page-title" th:text="${session.LOGIN_USER.roleCode == 'EMPLOYEE'} ? '我的考勤打卡' : '考勤管理'">考勤打卡</h1>
+            <div class="page-sub" th:text="${session.LOGIN_USER.roleCode == 'MANAGER'} ? '数据范围：本部门及其子部门（含下级组织树递归）' : '规则：每日一卡 · 9:00 后上班打卡记迟到 · 18:00 前下班打卡记早退'">
+                规则：每日一卡 · 9:00 后上班打卡记迟到 · 18:00 前下班打卡记早退
+            </div>
+        </div>
+        <div class="ms-auto" th:if="${session.LOGIN_USER.empId != null}">
+            <span class="role-badge" id="clockHint">今日状态加载中…</span>
+        </div>
+    </div>
+
+    <!-- 员工/经理/HR 均可自助打卡（需绑定员工） -->
+    <div class="card card-panel mb-3" th:if="${session.LOGIN_USER.empId != null}">
+        <div class="card-body d-flex align-items-center gap-4 flex-wrap">
+            <div class="text-center">
+                <div style="font-size:2.1rem;font-weight:800" id="clockBig">--:--:--</div>
+                <div class="text-secondary small">当前时间</div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn px-4 fw-semibold" id="btnIn" style="background:#16a34a;color:#fff;border:0"
+                        onclick="doClock('clock-in')">⬆ 上班打卡</button>
+                <button class="btn px-4 fw-semibold" id="btnOut" style="background:#e11d48;color:#fff;border:0"
+                        onclick="doClock('clock-out')">⬇ 下班打卡</button>
+            </div>
+            <div class="small text-secondary" id="clockMsg"></div>
+        </div>
+    </div>
+
+    <!-- EMPLOYEE：我的月度明细 -->
+    <div th:if="${session.LOGIN_USER.roleCode == 'EMPLOYEE'}">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <label class="form-label small mb-0 text-secondary">选择月份</label>
+            <input type="month" class="form-control form-control-sm" id="myMonth" style="width:170px" th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM')}">
+            <button class="btn btn-sm btn-outline-dark" onclick="loadMyMonth()">查 看</button>
+        </div>
+        <div class="card card-panel table-card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead><tr><th>日期</th><th>上班打卡</th><th>下班打卡</th><th>状态</th></tr></thead>
+                    <tbody id="myAttBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MANAGER/ADMIN/HR：月度汇总 -->
+    <div th:if="${session.LOGIN_USER.roleCode != 'EMPLOYEE'}">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <label class="form-label small mb-0 text-secondary">选择月份</label>
+            <input type="month" class="form-control form-control-sm" id="sumMonth" style="width:170px" th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM')}">
+            <button class="btn btn-sm btn-outline-dark" onclick="loadSummary()">查 看</button>
+            <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="exportSummary()">导出 CSV</button>
+        </div>
+        <div class="card card-panel table-card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead><tr>
+                        <th>员工姓名</th><th>部门</th><th>出勤天数</th><th>正常</th>
+                        <th>迟到</th><th>早退</th><th>出勤率</th>
+                    </tr></thead>
+                    <tbody id="sumBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+<div th:replace="~{fragments :: scripts}"></div>
+<div th:replace="~{fragments :: globalActions}"></div>
+<script>
+    const role = CTX.role;
+    let clockTimer;
+
+    function renderClock(today) {
+        const inBtn = document.getElementById("btnIn");
+        const outBtn = document.getElementById("btnOut");
+        const msg = document.getElementById("clockMsg");
+        const hint = document.getElementById("clockHint");
+        if (!today || today.checkInTime == null) {
+            inBtn.disabled = false;
+            outBtn.disabled = true;
+            msg.textContent = "尚未打卡：点击【上班打卡】开始今日考勤（9:00 后记迟到）";
+            hint.textContent = "未打卡";
+            return;
+        }
+        inBtn.disabled = true;
+        msg.textContent = today.checkOutTime
+            ? `今日已完成：${fmtDateTime(today.checkInTime)} → ${fmtDateTime(today.checkOutTime)}`
+            : `上班打卡时间：${fmtDateTime(today.checkInTime)}（状态：${ATT_TEXT[today.status]}）`;
+        outBtn.disabled = today.checkOutTime != null;
+        hint.textContent = today.checkOutTime ? "今日考勤已完成" : `在岗中 · ${ATT_TEXT[today.status]}`;
+    }
+
+    async function doClock(kind) {
+        const r = await api("/api/attendance/" + kind, { method: "POST" });
+        if (r !== null) { toast("打卡成功"); await initToday(); if (role !== "EMPLOYEE") loadSummary(); else loadMyMonth(); }
+    }
+
+    async function initToday() {
+        const t = await api("/api/attendance/today", { silent: true });
+        renderClock(t);
+    }
+
+    async function loadSummary() {
+        const month = document.getElementById("sumMonth").value || monthNow();
+        const rows = await api("/api/attendance/summary?month=" + month, { silent: true });
+        const body = document.getElementById("sumBody");
+        if (!rows || !rows.length) {
+            body.innerHTML = `<tr><td colspan="7">${empty404(`404：${month} 暂无考勤汇总数据`)}</td></tr>`;
+            return;
+        }
+        body.innerHTML = rows.map(r => {
+            const rate = Math.round((r.normalCnt + r.lateCnt + r.earlyCnt) * 100 / Math.max(1, r.workDays));
+            return `<tr>
+              <td><b>${esc(r.empName)}</b></td>
+              <td>${esc(r.deptName)}</td>
+              <td><b>${r.workDays}</b> 天</td>
+              <td><span class="st-badge st-normal">${r.normalCnt}</span></td>
+              <td><span class="st-badge st-late">${r.lateCnt}</span></td>
+              <td><span class="st-badge st-early">${r.earlyCnt}</span></td>
+              <td><span class="status-pill st-on">${rate}%</span></td>
+            </tr>`;
+        }).join("");
+    }
+
+    async function loadMyMonth() {
+        const month = document.getElementById("myMonth").value || monthNow();
+        const rows = await api("/api/attendance/my?month=" + month, { silent: true });
+        const body = document.getElementById("myAttBody");
+        if (!rows || !rows.length) {
+            body.innerHTML = `<tr><td colspan="4">${empty404(`404：${month} 还没有你的打卡记录`)}</td></tr>`;
+            return;
+        }
+        body.innerHTML = rows.map(r => `
+            <tr>
+              <td>${esc(fmtDate(r.workDate))}</td>
+              <td>${r.checkInTime ? esc(fmtDateTime(r.checkInTime)) : '<span class="text-secondary">-</span>'}</td>
+              <td>${r.checkOutTime ? esc(fmtDateTime(r.checkOutTime)) : '<span class="text-secondary">-</span>'}</td>
+              <td>${attBadge(r.status)}</td>
+            </tr>`).join("");
+    }
+
+    function exportSummary() {
+        const rows = [...document.querySelectorAll("#sumBody tr")]
+            .filter(tr => !tr.innerHTML.includes("empty-404"))
+            .map(tr => {
+                const td = [...tr.children].map(x => x.textContent.trim());
+                return td;
+            });
+        exportCSV(`考勤汇总_${document.getElementById("sumMonth").value}.csv`,
+            [{ key: "k0", label: "员工" }, { key: "k1", label: "部门" }, { key: "k2", label: "出勤天数" },
+                { key: "k3", label: "正常" }, { key: "k4", label: "迟到" }, { key: "k5", label: "早退" }, { key: "k6", label: "出勤率" }],
+            rows.map((t, i) => ({ k0: t[0].replace(/\(.*\)/, ""), k1: t[1], k2: t[2].replace(" 天", ""), k3: t[3], k4: t[4], k5: t[5], k6: t[6].replace("%", "") })));
+        toast("CSV 已导出");
+    }
+
+    setInterval(() => {
+        const d = new Date();
+        const el = document.getElementById("clockBig");
+        if (el) el.textContent = `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+    }, 1000);
+
+    (async () => {
+        await initToday();
+        if (role === "EMPLOYEE") await loadMyMonth(); else await loadSummary();
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+# =====================================================================
+# HRMS-404 人事管理系统 · 应用配置
+# 数据库密码 / DeepSeek API Key 支持通过环境变量覆盖（不写死在代码里）
+# =====================================================================
+server:
+  port: 8080
+  servlet:
+    session:
+      timeout: 8h
+
+spring:
+  application:
+    name: hrms-404
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/hrms_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+  thymeleaf:
+    cache: false
+    encoding: UTF-8
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+
+# DeepSeek V4 Flash API（Text to SQL）—— 密钥只从环境变量 DEEPSEEK_API_KEY 读取
+deepseek:
+  base-url: https://api.deepseek.com
+  model: deepseek-v4-flash
+  api-key: ${DEEPSEEK_API_KEY:}
+  read-timeout-seconds: 30
+
+logging:
+  level:
+    com.hrms404: info

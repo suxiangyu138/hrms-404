@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<!-- HRMS-404 仪表盘 -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('首页','home')}"></head>
+<body>
+<header th:replace="~{fragments :: topbar('home')}"></header>
+
+<main class="app-container">
+    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <div>
+            <h1 class="page-title">👋 你好，<span th:text="${session.LOGIN_USER.empName ?: session.LOGIN_USER.username}">用户</span></h1>
+            <div class="page-sub">
+                欢迎使用人事管理系统（HRMS-404）
+                <span th:if="${session.LOGIN_USER.roleCode == 'MANAGER'}"
+                      th:text="|· 你的数据范围为【${session.LOGIN_USER.deptName}】及其子部门|"></span>
+                <span th:if="${session.LOGIN_USER.roleCode == 'EMPLOYEE'}"
+                      th:text="|· ${session.LOGIN_USER.deptName} · ${session.LOGIN_USER.positionName}|"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4" id="cardRow"><!-- 统计卡片由 JS 渲染 --></div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card card-panel">
+                <div class="card-header bg-white border-0 pt-3 fw-semibold">组织架构速览</div>
+                <div class="card-body" id="orgPreview"></div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card card-panel h-100">
+                <div class="card-header bg-white border-0 pt-3 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">今日考勤（小组彩蛋：迟到的都会被打回 404 形神）</span>
+                    <span class="role-badge" id="todayClockTip"></span>
+                </div>
+                <div class="card-body text-center py-5" id="todayClock">
+                    <div class="stat-num mb-1">--</div>
+                    <div class="text-secondary small mb-3">打卡状态</div>
+                    <button class="btn btn-danger btn-sm px-4" onclick="location.href='/attendance'" style="background:#e11d48;border:0">去打卡</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+<div th:replace="~{fragments :: scripts}"></div>
+<div th:replace="~{fragments :: globalActions}"></div>
+<script>
+    async function init() {
+        // 1. 统计卡片（角色差异化由后端完成）
+        const cards = await api("/api/dashboard");
+        const row = document.getElementById("cardRow");
+        if (cards) {
+            row.innerHTML = cards.map(c => `
+                <div class="col-6 col-lg-3">
+                  <div class="card card-panel card-stat">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                      <div>
+                        <div class="text-secondary small">${esc(c.label)}</div>
+                        <div class="stat-num">${esc(c.value)}<small class="fs-6 ms-1 text-secondary">${esc(c.unit)}</small></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>`).join("");
+        }
+        // 2. 今日打卡状态（仅绑定员工的账号）
+        const today = await api("/api/attendance/today", { silent: true });
+        const box = document.getElementById("todayClock");
+        if (CTX.empId === "null" || !CTX.empId) {
+            box.innerHTML = `<div class="text-secondary">管理员账号（admin）未绑定员工，无打卡业务</div>`;
+        } else if (today === null) {
+            box.querySelector(".stat-num").textContent = "未打卡";
+            document.getElementById("todayClockTip").textContent = "今天也要元气满满";
+        } else if (!today.checkOutTime) {
+            box.querySelector(".stat-num").textContent = ATT_TEXT[today.status] + " · 在岗";
+            box.innerHTML += `<div class="small text-secondary">${esc(fmtDateTime(today.checkInTime))} 上班打卡</div>`;
+            document.getElementById("todayClockTip").textContent = "别忘记打下班卡";
+        } else {
+            box.querySelector(".stat-num").textContent = "已完成";
+            box.innerHTML += `<div class="small text-secondary">${esc(fmtDateTime(today.checkInTime))} ~ ${esc(fmtDateTime(today.checkOutTime))}</div>`;
+            document.getElementById("todayClockTip").textContent = "下班快乐";
+        }
+        // 3. 组织架构预览（员工账号不显示全量结构，改为个人简介）
+        const info = await api("/api/my/info", { silent: true });
+        const prev = document.getElementById("orgPreview");
+        if (!info) {
+            prev.innerHTML = `<div class="text-secondary small p-3">当前账号为管理员，未关联员工档案。</div>`;
+        } else if (CTX.role === "EMPLOYEE") {
+            prev.innerHTML = `
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between px-3"><span class="text-secondary">工号</span><b>${esc(info.empNo)}</b></li>
+                    <li class="list-group-item d-flex justify-content-between px-3"><span class="text-secondary">部门</span><b>${esc(info.deptName)}</b></li>
+                    <li class="list-group-item d-flex justify-content-between px-3"><span class="text-secondary">职位</span><b>${esc(info.positionName)}</b></li>
+                    <li class="list-group-item d-flex justify-content-between px-3"><span class="text-secondary">岗位工资</span><b>¥ ${money(info.baseSalary)}</b></li>
+                    <li class="list-group-item d-flex justify-content-between px-3"><span class="text-secondary">入职日期</span><b>${esc(fmtDate(info.hireDate))}</b></li>
+                </ul>`;
+        } else {
+            // 组织树简览（仅前两级 + 汇总）
+            const dept = await api("/api/departments/tree", { silent: true });
+            if (!dept) return;
+            const roots = dept.tree.filter(n => n.parentId === null);
+            const second = dept.tree.filter(n => roots.some(r => r.deptId === n.parentId));
+            const rest = dept.tree.length - roots.length - second.length;
+            prev.innerHTML = roots.map(r => `
+                <div class="d-flex justify-content-between border-bottom py-2 px-1">
+                  <span><b>${esc(r.deptName)}</b><span class="text-secondary ms-2 small">${esc(r.deptPath)}</span></span>
+                  <span class="text-secondary small">${(dept.subtreeCounts[r.deptId] ?? 0)} 人</span>
+                </div>`).join("")
+                + (second.length ? `<div class="text-secondary small px-1 pt-2">├─ ${second.map(s => esc(s.deptName)).join(" · ")}</div>` : "")
+                + (rest > 0 ? `<div class="text-secondary small px-1 pt-1">└─ 及 ${rest} 个下级部门（详见 部门管理）</div>` : "");
+        }
+    }
+    init();
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<!-- HRMS-404 公共片段：head / topbar / footer / scripts（404 Not Found 小组） -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ========== <head> 片段 ========== -->
+<head th:fragment="head(title,active)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' · HRMS-404'">页面 · HRMS-404</title>
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/hrms.css}">
+    <!-- 小组特征元素：页签标题统一携带 HRMS-404 后缀 -->
+</head>
+
+<!-- ========== 顶栏导航片段 ========== -->
+<header th:fragment="topbar(active)">
+    <nav class="navbar navbar-expand-lg navbar-hrms sticky-top">
+        <div class="container-fluid px-3 px-lg-4">
+            <a class="navbar-brand d-flex align-items-center gap-2 me-4" th:href="@{/}">
+                <span class="brand-404">404</span>
+                <span>
+                    <strong class="d-block lh-1">人事管理系统</strong>
+                    <span class="small text-secondary" style="font-size:.68rem">HRMS-404 · 404 Not Found 小组</span>
+                </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navMenu">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" th:classappend="${active=='home'}?'active'" th:href="@{/}">首页</a></li>
+                    <li class="nav-item"
+                        th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR' or session.LOGIN_USER.roleCode == 'MANAGER'}">
+                        <a class="nav-link" th:classappend="${active=='employees'}?'active'" th:href="@{/employees}">员工管理</a></li>
+                    <li class="nav-item" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR'}">
+                        <a class="nav-link" th:classappend="${active=='departments'}?'active'" th:href="@{/departments}">部门管理</a></li>
+                    <li class="nav-item" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR'}">
+                        <a class="nav-link" th:classappend="${active=='positions'}?'active'" th:href="@{/positions}">职位管理</a></li>
+                    <li class="nav-item"><a class="nav-link" th:classappend="${active=='attendance'}?'active'" th:href="@{/attendance}">考勤打卡</a></li>
+                    <li class="nav-item" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR'}">
+                        <a class="nav-link" th:classappend="${active=='salaries'}?'active'" th:href="@{/salaries}">薪资管理</a></li>
+                    <li class="nav-item"
+                        th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR' or session.LOGIN_USER.roleCode == 'MANAGER'}">
+                        <a class="nav-link" th:classappend="${active=='text2sql'}?'active'" th:href="@{/text2sql}">AI 智能查询</a></li>
+                </ul>
+                <ul class="navbar-nav align-items-lg-center gap-lg-1">
+                    <li class="nav-item" th:if="${session.LOGIN_USER.empId != null}">
+                        <a class="nav-link" th:classappend="${active=='my'}?'active'" th:href="@{/my}">我的中心</a></li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
+                            <span class="avatar-circle" th:text="${session.LOGIN_USER.empName != null ? session.LOGIN_USER.empName.substring(0,1) : '管'}">我</span>
+                            <span th:text="${session.LOGIN_USER.empName ?: session.LOGIN_USER.username}">用户</span>
+                            <span class="role-badge" th:text="${session.LOGIN_USER.roleName}">角色</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li th:if="${session.LOGIN_USER.empId != null}"><a class="dropdown-item" th:href="@{/my}">个人中心</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="changePassword(event)">修改密码</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="logout(event)">退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <!-- 会话注入：页面 JS 读取 data-* 获取当前用户 -->
+    <div id="ctx" class="d-none" th:attr="data-username=${session.LOGIN_USER.username},
+        data-emp-name=${session.LOGIN_USER.empName},
+        data-emp-id=${session.LOGIN_USER.empId},
+        data-role=${session.LOGIN_USER.roleCode},
+        data-role-name=${session.LOGIN_USER.roleName}"></div>
+
+    <style>
+        .avatar-circle {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: #eef2ff; color: #4338ca; font-size: .85rem;
+            display: inline-flex; align-items: center; justify-content: center; font-weight: 600;
+        }
+    </style>
+</header>
+
+<!-- ========== 修改密码/登出 公共脚本（挂在 topbar 页面） ========== -->
+<script th:fragment="globalActions">
+    async function logout(ev) {
+        ev.preventDefault();
+        await api("/api/auth/logout", { method: "POST" });
+        location.href = "/login";
+    }
+    async function changePassword(ev) {
+        ev.preventDefault();
+        const oldPwd = prompt("请输入原密码：");
+        if (oldPwd === null) return;
+        const newPwd = prompt("请输入新密码（6~20 位）：");
+        if (newPwd === null) return;
+        const confirm = await confirmDlg("确认将密码修改为新密码？");
+        if (!confirm) return;
+        const r = await api("/api/auth/password", {
+            method: "POST", body: JSON.stringify({ oldPassword: oldPwd, newPassword: newPwd })
+        });
+        if (r !== null) toast("密码修改成功，下次登录请使用新密码");
+    }
+</script>
+
+<!-- ========== 页脚片段（小组署名） ========== -->
+<footer th:fragment="footer" class="app-footer">
+    © 2026 <b>404 Not Found 小组</b> · 人事管理系统数据库课程设计 · HRMS-404 v4.0.4
+    <span class="mx-2">|</span> 若系统有 Bug——它们已经被我们 404 了
+</footer>
+
+<!-- ========== 底部资源片段 ========== -->
+<div th:fragment="scripts">
+    <script th:src="@{/vendor/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/js/hrms.js}"></script>
+    <script>
+        // 小组特征元素 · 控制台彩蛋
+        console.log("%c 404 Not Found %c 页面已找到，系统运行正常 :) ",
+            "background:#e11d48;color:#fff;font-size:14px;padding:4px 8px;border-radius:4px 0 0 4px;font-weight:bold",
+            "background:#0f172a;color:#a5f3fc;font-size:12px;padding:4px 8px;border-radius:0 4px 4px 0");
+        console.log("%c HRMS-404 · 人事管理系统数据库课程设计", "color:#64748b;font-size:12px");
+    </script>
+</div>
+
+</body>
+</html>

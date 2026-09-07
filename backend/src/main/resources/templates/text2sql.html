@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<!-- HRMS-404 Text to SQL · AI 智能查询 -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('AI 智能查询','text2sql')}"></head>
+<body>
+<header th:replace="~{fragments :: topbar('text2sql')}"></header>
+
+<main class="app-container">
+    <div class="d-flex align-items-center gap-3 mb-3">
+        <div>
+            <h1 class="page-title">AI 智能查询 · Text to SQL</h1>
+            <div class="page-sub">
+                自然语言 → <b>DeepSeek V4 Flash</b>（<code>/chat/completions</code>，OpenAI 兼容）→ SQL 安全校验 → 执行查询
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-5">
+            <div class="card card-panel h-100">
+                <div class="card-header bg-white border-0 pt-3">
+                    <span class="fw-semibold">❓ 你想查什么？</span>
+                </div>
+                <div class="card-body">
+                    <label class="form-label small text-secondary">示例问题（点击自动填入）</label>
+                    <div class="d-flex flex-wrap gap-1 mb-3" id="examples"></div>
+                    <textarea class="form-control" id="question" rows="4"
+                              placeholder="例如：统计每个部门的在职员工人数"></textarea>
+                    <div class="form-text">
+                        安全约束：仅允许 SELECT；禁止系统库/危险函数；强制 LIMIT 100；单条语句。<br>
+                        该功能调用 DeepSeek V4 Flash API，需要环境变量 DEEPSEEK_API_KEY。
+                    </div>
+                    <button class="btn mt-3 px-4 fw-semibold" id="askBtn" style="background:#e11d48;color:#fff;border:0"
+                            onclick="ask()">🚀 生成并查询</button>
+                    <span class="small text-secondary ms-2" id="askStatus"></span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card card-panel mb-3">
+                <div class="card-header bg-white border-0 pt-3 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">🧠 AI 生成的 SQL（可手动修正后再次执行）</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="copySql()">复制</button>
+                        <button class="btn btn-sm btn-outline-dark" onclick="reRun()" disabled id="rerunBtn">执行已显示 SQL</button>
+                    </div>
+                </div>
+                <div class="card-body py-2">
+                    <pre class="sql-pre mb-0" id="sqlPre" style="min-height:96px">尚无查询——等待你输入自然语言问题…</pre>
+                </div>
+            </div>
+            <div class="card card-panel">
+                <div class="card-header bg-white border-0 pt-3 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">📊 查询结果 <span class="small text-secondary" id="resultMeta"></span></span>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportResult()" id="exportBtn" disabled>导出 CSV</button>
+                </div>
+                <div class="card-body table-responsive" id="resultArea">
+                    <div class="empty-404"><div class="big">404 NOT FOUND</div>
+                        <div class="mt-1">结果区待命——AI 未生成结果前，这里保持 404 状态</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+<div th:replace="~{fragments :: scripts}"></div>
+<div th:replace="~{fragments :: globalActions}"></div>
+<script>
+    const EXAMPLES = [
+        "统计每个部门的在职员工人数，按人数降序",
+        "查询所有销售部员工的姓名、职位和电话",
+        "找出 2026 年 8 月考勤中有迟到记录的员工姓名和迟到天数",
+        "查询研发一组每位工程师 2026-09 的应发工资构成",
+        "统计各部门 8 月实发工资总额并排序"
+    ];
+    let lastResult = null;
+
+    EXAMPLES.forEach(q => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "btn btn-sm btn-outline-secondary rounded-pill";
+        chip.textContent = q;
+        chip.onclick = () => document.getElementById("question").value = q;
+        document.getElementById("examples").appendChild(chip);
+    });
+
+    async function ask() {
+        const q = document.getElementById("question").value.trim();
+        if (!q) return toast("请先输入查询问题", "error");
+        const btn = document.getElementById("askBtn");
+        btn.disabled = true;
+        document.getElementById("askStatus").textContent = "AI 思考中…（约 3~15 秒）";
+        try {
+            const data = await api("/api/text2sql", { method: "POST", body: JSON.stringify({ question: q }) });
+            if (data) renderResult(data);
+        } finally {
+            btn.disabled = false;
+            document.getElementById("askStatus").textContent = "";
+        }
+    }
+
+    function renderResult(data) {
+        lastResult = data;
+        document.getElementById("sqlPre").textContent = data.sql;
+        document.getElementById("rerunBtn").disabled = false;
+        document.getElementById("resultMeta").textContent = `共 ${data.count} 行 · 耗时 ${data.costMs} ms`;
+        const area = document.getElementById("resultArea");
+        if (!data.columns.length) {
+            area.innerHTML = `<div class="empty-404"><div class="big">404</div><div class="mt-1">查询成功但没有匹配数据（你的问题精准地命中了空气）</div></div>`;
+            document.getElementById("exportBtn").disabled = true;
+            return;
+        }
+        const head = data.columns.map(c => `<th>${esc(c.label)}</th>`).join("");
+        const body = data.rows.map(r => "<tr>" + data.columns.map(c => {
+            const v = r[c.key];
+            if (v === null || v === undefined) return "<td class='text-secondary'>NULL</td>";
+            if (c.key.toLowerCase().includes("salary") || c.key.toLowerCase().includes("count")
+                || c.key.toLowerCase().includes("base") || typeof v === "number") return `<td>${esc(money ? fmtNum(v) : v)}</td>`;
+            return `<td>${esc(v)}</td>`;
+        }).join("") + "</tr>").join("");
+        area.innerHTML = `<table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-light"><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+        document.getElementById("exportBtn").disabled = false;
+    }
+
+    function fmtNum(v) {
+        if (typeof v === "number" && !Number.isInteger(v)) return v.toLocaleString("zh-CN", { maximumFractionDigits: 2 });
+        return v;
+    }
+
+    function copySql() {
+        navigator.clipboard.writeText(document.getElementById("sqlPre").textContent).then(() => toast("SQL 已复制"));
+    }
+
+    async function reRun() {
+        const btn = document.getElementById("rerunBtn");
+        btn.disabled = true;
+        try {
+            // 校验与执行仍走后端安全通道
+            const data = await api("/api/text2sql/run-sql", { method: "POST", body: JSON.stringify({ sql: document.getElementById("sqlPre").textContent }) });
+            if (data) renderResult(data);
+        } finally { btn.disabled = false; }
+    }
+
+    function exportResult() {
+        if (!lastResult) return;
+        exportCSV(`AI查询结果_${Date.now().slice(0, 10)}.csv`,
+            lastResult.columns, lastResult.rows);
+        toast("CSV 已导出");
+    }
+</script>
+</body>
+</html>

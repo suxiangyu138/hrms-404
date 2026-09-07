@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<!-- HRMS-404 登录页（404 Not Found 小组） -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>登录 · HRMS-404</title>
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/hrms.css}">
+</head>
+<body class="login-bg">
+<div class="login-card card">
+    <div class="card-body p-4 p-lg-5">
+        <div class="login-brand">
+            <span class="brand-404 mb-2" style="width:52px;height:52px;font-size:1.35rem">404</span>
+            <h4 class="fw-bold mb-1 mt-3">人事管理系统</h4>
+            <div class="text-secondary small">数据库课程设计 · HRMS-404</div>
+        </div>
+        <form id="loginForm">
+            <div class="mb-3">
+                <label class="form-label small fw-semibold text-secondary">登录账号</label>
+                <input class="form-control" id="username" placeholder="工号 / 账号，如 admin" autocomplete="username" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-semibold text-secondary">密码</label>
+                <input type="password" class="form-control" id="password" placeholder="默认 123456" autocomplete="current-password" required>
+            </div>
+            <button class="btn w-100 mb-3" id="loginBtn"
+                    style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;font-weight:600;border:0">登 录</button>
+            <div class="login-hint text-center">
+                演示账号（密码均为 123456）：<br>
+                <b>admin</b> 管理员 · <b>hr01</b> 人事专员 · <b>manager01</b> 销售经理 · <b>E008</b> 普通员工
+            </div>
+        </form>
+    </div>
+    <div class="card-footer text-center bg-transparent border-0 pb-4 login-hint">
+        © 2026 <b>404 Not Found 小组</b> · 人事管理系统数据库课程设计
+    </div>
+</div>
+<script th:src="@{/vendor/bootstrap.bundle.min.js}"></script>
+<script>
+    // 登录成功后默认首页
+    const HOME = { ADMIN: "/", HR: "/", MANAGER: "/", EMPLOYEE: "/" };
+    document.getElementById("loginForm").addEventListener("submit", async ev => {
+        ev.preventDefault();
+        const btn = document.getElementById("loginBtn");
+        btn.disabled = true;
+        btn.textContent = "登录中…";
+        try {
+            const resp = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    username: document.getElementById("username").value.trim(),
+                    password: document.getElementById("password").value
+                })
+            });
+            const json = await resp.json();
+            if (json.code !== 200) {
+                alert("登录失败：" + json.message);
+            } else {
+                location.href = HOME[json.data.roleCode] || "/";
+            }
+        } catch (e) {
+            alert("网络异常，请稍后重试");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "登 录";
+        }
+    });
+    console.log("%c 404 Not Found %c 输入任意演示账号即可开始（默认密码 123456）",
+        "background:#e11d48;color:#fff;font-size:12px;padding:2px 6px;border-radius:3px",
+        "color:#94a3b8;font-size:12px");
+</script>
+</body>
+</html>
