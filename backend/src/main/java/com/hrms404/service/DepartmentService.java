@@ -37,14 +37,20 @@ public class DepartmentService {
                         .eq(Employee::getStatus, 1)
                         .select(Employee::getDeptId))
                 .forEach(e -> direct.merge(e.getDeptId(), 1L, Long::sum));
-        // 含子部门总人数：由直属数向上累加（树已按路径排序，父先于子）
+        // 含子部门总人数：先各自取直属数，再由子向上累加到父。
+        // selectOrgTree 按 dept_path 排序，父路径必为子路径前缀，故父一定排在子之前；
+        // 倒序遍历即为「子先于父」，可一次线性累加完成，无需递归。
+        // 注意方向：是「父 += 子」，不能写成「子 += 父」——后者读到的是父节点尚未累加的
+        // 初始值（0），会让所有非叶子部门恒为 0，而叶子因父值为 0 恰好等于直属数、看不出错。
         Map<Long, Long> total = new HashMap<>();
         for (DeptOrgNode node : tree) {
-            long sum = direct.getOrDefault(node.getDeptId(), 0L);
+            total.put(node.getDeptId(), direct.getOrDefault(node.getDeptId(), 0L));
+        }
+        for (int i = tree.size() - 1; i >= 0; i--) {
+            DeptOrgNode node = tree.get(i);
             if (node.getParentId() != null) {
-                sum += total.getOrDefault(node.getParentId(), 0L);
+                total.merge(node.getParentId(), total.get(node.getDeptId()), Long::sum);
             }
-            total.put(node.getDeptId(), sum);
         }
         Map<String, Object> result = new HashMap<>();
         result.put("tree", tree);
