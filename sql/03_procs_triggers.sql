@@ -52,6 +52,10 @@ END$$
 
 -- ---------- 3. 按月批量生成薪资（幂等：已存在月份跳过） ----------
 -- 绩效：当月无迟到早退且出勤>=1 天奖励 300；扣款：每次迟到或早退扣 20 元
+-- 注意：当月没有任何考勤记录的员工，LEFT JOIN 后 late_cnt / early_cnt 为 NULL，
+-- 而 deduction 列是 NOT NULL —— 显式插入 NULL 不会回落到 DEFAULT 0，而是直接报
+-- "Column 'deduction' cannot be null" 导致整批 INSERT 失败（如给新月份生成薪资时）。
+-- 因此统计值一律先用 IFNULL 兜底为 0，不能依赖 CASE 的三值逻辑。
 DROP PROCEDURE IF EXISTS sp_generate_monthly_salary$$
 CREATE PROCEDURE sp_generate_monthly_salary(IN p_month VARCHAR(7))
 COMMENT '按考勤与职位月薪为在职员工生成当月薪资，重复调用不产生重复记录'
@@ -60,8 +64,9 @@ BEGIN
     SELECT e.emp_id,
            p_month,
            p.base_salary,
-           CASE WHEN stats.late_cnt + stats.early_cnt > 0 THEN 0 ELSE 300 END AS performance,
-           ROUND((stats.late_cnt + stats.early_cnt) * 20, 2)                  AS deduction
+           CASE WHEN IFNULL(stats.late_cnt, 0) + IFNULL(stats.early_cnt, 0) > 0
+                THEN 0 ELSE 300 END                                            AS performance,
+           ROUND((IFNULL(stats.late_cnt, 0) + IFNULL(stats.early_cnt, 0)) * 20, 2) AS deduction
     FROM employee e
              JOIN position p ON e.position_id = p.position_id
              LEFT JOIN (SELECT a.emp_id,
