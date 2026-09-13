@@ -1,95 +1,216 @@
 <!DOCTYPE html>
-<!-- HRMS-404 登录页（404 Not Found 小组 · 企业级深色科技背景） -->
+<!-- HRMS-404 登录页：左右分栏 · 左品牌展示 + 右登录表单 · 深蓝渐变 + 毛玻璃卡片 -->
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>登录 · HRMS-404</title>
     <link rel="stylesheet" th:href="@{/vendor/bootstrap.min.css(v=4)}">
-    <link rel="stylesheet" th:href="@{/css/hrms.css(v=4)}">
+    <link rel="stylesheet" th:href="@{/css/hrms.css(v=12)}">
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
 </head>
 <body class="login-bg">
-    <!-- 幽灵 404 水印：品牌回声 -->
-    <div class="login-ghost" aria-hidden="true">404</div>
 
-    <div class="login-card card">
-        <div class="card-body p-4 p-lg-5">
-            <div class="login-brand">
-                <!-- 品牌徽章：蓝青渐变 + 玫瑰红斜线穿过 404（视觉化 Not Found 语义） -->
-                <svg class="brand-404 mb-2" width="58" height="58" viewBox="0 0 44 44" role="img" aria-label="404 Not Found 小组">
-                    <defs>
-                        <linearGradient id="lg404" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0" stop-color="#2563eb"/>
-                            <stop offset="1" stop-color="#0ea5e9"/>
-                        </linearGradient>
-                        <linearGradient id="strike404" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0" stop-color="#f43f5e"/>
-                            <stop offset="1" stop-color="#e11d48"/>
-                        </linearGradient>
-                    </defs>
-                    <rect width="44" height="44" rx="11" fill="url(#lg404)"/>
-                    <rect x="1.2" y="1.2" width="41.6" height="41.6" rx="10" fill="none"
-                          stroke="rgba(255,255,255,.4)" stroke-width="1"/>
-                    <text x="22" y="28.5" text-anchor="middle" fill="#ffffff"
-                          font-family="Segoe UI, PingFang SC, sans-serif"
-                          font-size="19" font-weight="700" letter-spacing=".5">404</text>
-                    <line x1="8.5" y1="31.5" x2="35.5" y2="16.5" stroke="url(#strike404)"
-                          stroke-width="2.6" stroke-linecap="round"/>
-                </svg>
-                <h4 class="fw-bold mb-1 mt-3">人事管理系统</h4>
-                <div class="login-sub">HRMS-404 · 企业人力资源数字化平台</div>
-            </div>
-            <form id="loginForm">
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold text-secondary">登录账号</label>
-                    <input class="form-control" id="username" placeholder="工号 / 账号，如 admin" autocomplete="username" required>
+<div class="login-shell">
+
+    <!-- ========== 左：品牌展示区 ========== -->
+    <section class="login-visual">
+        <!-- 装饰层：细网格 + 光斑 + 幽灵 404，全部 aria-hidden 不干扰读屏 -->
+        <div class="visual-grid" aria-hidden="true"></div>
+        <div class="visual-orb visual-orb-a" aria-hidden="true"></div>
+        <div class="visual-orb visual-orb-b" aria-hidden="true"></div>
+        <div class="visual-404" aria-hidden="true">404</div>
+
+        <div class="visual-brand">
+            <!-- 品牌徽章：深海军蓝底 + 白色 H 结构 + 天蓝中心节点。
+                 徽章底色与左栏渐变同色系，靠 CSS 的浅色描边环把两者分开 -->
+            <svg class="brand-mark" width="42" height="42" viewBox="0 0 48 48" role="img" aria-label="人事管理系统">
+                <defs>
+                    <linearGradient id="hrBgLogin" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#1E3A8A"/>
+                        <stop offset="1" stop-color="#0B1E54"/>
+                    </linearGradient>
+                </defs>
+
+                <rect width="48" height="48" rx="12" fill="url(#hrBgLogin)"/>
+
+                <!-- 抽象 H / 双人连接结构 -->
+                <rect x="15" y="15" width="4" height="18" rx="2" fill="#FFFFFF"/>
+                <rect x="29" y="15" width="4" height="18" rx="2" fill="#FFFFFF"/>
+                <rect x="19" y="22" width="10" height="4" rx="2" fill="#FFFFFF"/>
+
+                <!-- 中心节点 -->
+                <circle cx="24" cy="24" r="2.8" fill="#38BDF8"/>
+            </svg>
+            <span class="brand-word">HRMS-404</span>
+        </div>
+
+        <div class="visual-main">
+            <h1>人事管理系统</h1>
+            <p class="visual-sub">HRMS-404 · 企业人力资源数字化平台</p>
+            <p class="visual-tag">让组织与人才管理更高效</p>
+        </div>
+
+        <div class="visual-foot">数据库课程设计 · 404 Not Found 小组</div>
+    </section>
+
+    <!-- ========== 右：登录表单区 ========== -->
+    <section class="login-panel">
+        <div class="panel-inner">
+            <header class="panel-head">
+                <h2>欢迎登录</h2>
+                <p>请输入您的账号信息</p>
+            </header>
+
+            <form id="loginForm" novalidate>
+                <div class="field">
+                    <label for="username">账号</label>
+                    <div class="input-wrap">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <input id="username" type="text" placeholder="请输入账号"
+                               autocomplete="username" spellcheck="false" required>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold text-secondary">密码</label>
-                    <input type="password" class="form-control" id="password" placeholder="默认 123456" autocomplete="current-password" required>
+
+                <div class="field">
+                    <label for="password">密码</label>
+                    <div class="input-wrap">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="11" width="18" height="11" rx="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        <input id="password" type="password" placeholder="请输入密码"
+                               autocomplete="current-password" required>
+                        <button type="button" class="pwd-toggle" id="pwdToggle" aria-label="显示密码">
+                            <svg class="ico-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <svg class="ico-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M9.9 5.2A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.4 4.3"/>
+                                <path d="M6.2 6.2A17.7 17.7 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 4.5-1.1"/>
+                                <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>
+                                <line x1="3" y1="3" x2="21" y2="21"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                <button class="btn-login mb-3" id="loginBtn">登 录</button>
-                <div class="login-hint text-center">
-                    演示账号（密码均为 123456）：<br>
-                    <b>admin</b> 管理员 · <b>hr01</b> 人事专员 · <b>manager01</b> 销售经理 · <b>E0001</b> 普通员工
-                </div>
+
+                <!-- 登录失败提示：替代 alert()，页面内反馈更克制 -->
+                <div class="login-error" id="loginError" role="alert" hidden></div>
+
+                <button class="btn-login" id="loginBtn" type="submit">登 录</button>
             </form>
+
+            <div class="demo-box">
+                <div class="demo-title">演示账号（密码均为 123456）</div>
+                <ul class="demo-list">
+                    <li><b>admin</b><span>系统管理员</span></li>
+                    <li><b>hr01</b><span>人事专员</span></li>
+                    <li><b>manager01</b><span>部门经理</span></li>
+                    <li><b>E0001</b><span>普通员工</span></li>
+                </ul>
+            </div>
         </div>
-        <div class="card-footer text-center bg-transparent border-0 pb-4 login-hint">
-            © 2026 404 Not Found 小组 · 人事管理系统数据库课程设计
-        </div>
-    </div>
-<script th:src="@{/vendor/bootstrap.bundle.min.js(v=4)}"></script>
+    </section>
+</div>
+
+<!-- ========== 底部：版权与小组分工 ========== -->
+<footer class="login-footer">
+    <!-- 分隔符与后半句各自成元素：窄屏隐藏「·」并把后半句另起一行，
+         免得浏览器在「小组」「课程设计」这种词中间断行 -->
+    <div class="foot-line">© 2026 <b>404 Not Found 小组</b><span class="foot-sep"> · </span><span class="foot-org">人事管理系统数据库课程设计</span></div>
+    <div class="foot-sub">本系统由小组成员设计与开发</div>
+    <ul class="foot-team">
+        <li>
+            <span class="ava" aria-hidden="true">桑</span>
+            <span class="who"><span class="name">桑翔羽</span><span class="role">系统开发</span></span>
+        </li>
+        <li>
+            <span class="ava" aria-hidden="true">陈</span>
+            <span class="who"><span class="name">陈逸少</span><span class="role">数据库设计</span></span>
+        </li>
+        <li>
+            <span class="ava" aria-hidden="true">陈</span>
+            <span class="who"><span class="name">陈德炫</span><span class="role">数据库设计辅助与文档</span></span>
+        </li>
+        <li>
+            <span class="ava" aria-hidden="true">崔</span>
+            <span class="who"><span class="name">崔国玄</span><span class="role">测试与质量保障</span></span>
+        </li>
+    </ul>
+</footer>
+
+<!-- 本页只用 Bootstrap 的 CSS 类，不含任何 JS 组件（modal/dropdown 等），
+     故不引入 bootstrap.bundle.min.js：少一次请求，登录页首屏更快 -->
 <script>
     const HOME = { ADMIN: "/", HR: "/", MANAGER: "/", EMPLOYEE: "/" };
-    document.getElementById("loginForm").addEventListener("submit", async ev => {
+    const form = document.getElementById("loginForm");
+    const btn = document.getElementById("loginBtn");
+    const errBox = document.getElementById("loginError");
+
+    function showError(msg) {
+        errBox.textContent = msg;
+        errBox.hidden = false;
+    }
+    function clearError() {
+        errBox.hidden = true;
+        errBox.textContent = "";
+    }
+
+    /* 密码显隐切换 */
+    const pwdInput = document.getElementById("password");
+    const pwdToggle = document.getElementById("pwdToggle");
+    pwdToggle.addEventListener("click", () => {
+        const shown = pwdInput.type === "text";
+        pwdInput.type = shown ? "password" : "text";
+        pwdToggle.classList.toggle("is-on", !shown);
+        pwdToggle.setAttribute("aria-label", shown ? "显示密码" : "隐藏密码");
+        pwdInput.focus();
+    });
+
+    /* 输入时清掉上一次的错误提示，避免旧错误一直挂着 */
+    [document.getElementById("username"), pwdInput].forEach(el =>
+        el.addEventListener("input", clearError));
+
+    form.addEventListener("submit", async ev => {
         ev.preventDefault();
-        const btn = document.getElementById("loginBtn");
+        clearError();
+
+        const username = document.getElementById("username").value.trim();
+        const password = pwdInput.value;
+        if (!username) { showError("请输入账号"); return; }
+        if (!password) { showError("请输入密码"); return; }
+
         btn.disabled = true;
         btn.textContent = "登录中…";
         try {
             const resp = await fetch("/api/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    username: document.getElementById("username").value.trim(),
-                    password: document.getElementById("password").value
-                })
+                body: JSON.stringify({ username, password })
             });
             const json = await resp.json();
             if (json.code !== 200) {
-                alert("登录失败：" + json.message);
+                showError(json.message || "登录失败，请重试");
             } else {
                 location.href = HOME[json.data.roleCode] || "/";
             }
         } catch (e) {
-            alert("网络异常，请稍后重试");
+            showError("网络异常，请确认后端服务已启动");
         } finally {
             btn.disabled = false;
             btn.textContent = "登 录";
         }
     });
+
     console.log("%c 404 Not Found %c 输入任意演示账号即可开始（默认密码 123456）",
         "background:#2563eb;color:#fff;font-size:12px;padding:2px 6px;border-radius:3px",
         "color:#93a0ae;font-size:12px");

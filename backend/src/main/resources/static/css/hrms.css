@@ -59,10 +59,10 @@ body {
     padding: 14px 18px;
     border-bottom: 1px solid var(--line);
 }
-/* 品牌徽章（SVG）：蓝青渐变圆角方块 + 白色 404 + 玫瑰红"Not Found"斜线 */
+/* 品牌徽章（SVG）：深海军蓝渐变圆角方块 + 白色 H 结构 + 天蓝中心节点 */
 .brand-404 {
     display: inline-flex; flex: 0 0 auto; border-radius: 11px;
-    box-shadow: 0 6px 18px rgba(37, 99, 235, .32);
+    box-shadow: 0 6px 18px rgba(11, 30, 84, .3);
 }
 .brand-name { line-height: 1.15; }
 .brand-name b { display: block; font-size: 14px; color: var(--text-1); }
@@ -219,66 +219,257 @@ button[style*="e11d48"]:hover, button[style*="be123c"]:hover, button[style*="16a
 }
 .empty-404 .big { font-size: 26px; font-weight: 800; color: #d3dce6; letter-spacing: 3px; }
 
-/* ================= 登录页（深海军蓝企业背景 + 玻璃卡片） ================= */
+/* ================= 登录页（左右分栏 · 深蓝渐变 + 毛玻璃卡片） ================= */
 .login-bg {
-    min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    position: relative; overflow: hidden;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center;
+    gap: 16px; padding: 26px 20px;
+    /* 纵向溢出必须可见可滚：1366×768 投影时卡片 + 署名区比视口高，
+       若这里 overflow:hidden 会把页脚直接裁掉且滚不到 */
+    position: relative; overflow-x: hidden;
     background:
-        radial-gradient(1100px 720px at 88% -8%, rgba(14, 165, 233, .12), transparent 58%),
-        radial-gradient(900px 680px at -8% 108%, rgba(37, 99, 235, .16), transparent 55%),
-        linear-gradient(158deg, #0c1e3a 0%, #0a1424 52%, #0e2342 100%);
+        radial-gradient(1000px 640px at 85% -10%, rgba(59, 130, 246, .34), transparent 60%),
+        radial-gradient(820px 620px at -10% 110%, rgba(37, 99, 235, .30), transparent 58%),
+        linear-gradient(145deg, #0A2540 0%, #1E3A8A 58%, #2563EB 120%);
 }
-/* 蓝图细网格（径向渐隐，模拟工程图纸质感） */
-.login-bg::before {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background-image:
-        linear-gradient(rgba(148, 163, 184, .055) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(148, 163, 184, .055) 1px, transparent 1px);
-    background-size: 46px 46px;
-    -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 78%);
-    mask-image: radial-gradient(ellipse at center, black 25%, transparent 78%);
-}
-/* 幽灵 404 水印：品牌回声，几乎不可见但存在 */
-.login-ghost {
-    position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%);
-    font-size: 36vh; font-weight: 800; letter-spacing: .04em;
-    color: rgba(148, 163, 184, .05);
-    user-select: none; pointer-events: none; z-index: 0;
-    font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-.login-card {
+
+/* ---------- 卡片容器 ---------- */
+.login-shell {
     position: relative; z-index: 1;
-    width: 384px; border: 1px solid rgba(255, 255, 255, .55); border-radius: 12px;
-    background: rgba(255, 255, 255, .94);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow: 0 24px 80px rgba(2, 6, 23, .55), 0 2px 8px rgba(2, 6, 23, .3);
-    animation: loginRise .5s ease-out both;
+    /* 居中改用 auto 外边距（配合 .login-footer 的 margin-bottom:auto），
+       不用 justify-content:center —— 后者在内容超出视口时会上下同时溢出，
+       上半截永远滚不到；auto 外边距在空间不足时归零，只向下溢出，可滚动 */
+    margin-top: auto;
+    display: flex; width: 100%; max-width: 960px; min-height: 540px;
+    border-radius: 16px; overflow: hidden;
+    background: rgba(255, 255, 255, .96);
+    border: 1px solid rgba(255, 255, 255, .2);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 20px 60px rgba(2, 6, 23, .42), 0 2px 10px rgba(2, 6, 23, .22);
+    animation: loginRise .55s cubic-bezier(.22, .68, .32, 1) both;
 }
-.login-brand { text-align: center; margin-bottom: 18px; }
-.login-brand h4 { font-weight: 700; letter-spacing: .02em; }
-.login-brand .login-sub {
-    font-size: 11.5px; color: var(--text-3); letter-spacing: .06em; margin-top: 2px;
+
+/* ---------- 左：品牌展示区 ---------- */
+.login-visual {
+    position: relative; overflow: hidden; flex: 0 0 45%;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 38px 36px; color: #fff;
+    background: linear-gradient(155deg, #0A2540 0%, #17356f 55%, #2563EB 135%);
 }
-.login-hint { font-size: 11.5px; color: var(--text-3); }
+/* 细网格：工程图纸质感，径向渐隐避免干扰文字 */
+.visual-grid {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, .055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .055) 1px, transparent 1px);
+    background-size: 40px 40px;
+    -webkit-mask-image: radial-gradient(ellipse at 28% 42%, black 18%, transparent 76%);
+    mask-image: radial-gradient(ellipse at 28% 42%, black 18%, transparent 76%);
+}
+/* 蓝色光斑：缓慢浮动，制造层次 */
+.visual-orb { position: absolute; border-radius: 50%; pointer-events: none; }
+.visual-orb-a {
+    width: 260px; height: 260px; right: -90px; top: -80px;
+    background: radial-gradient(circle, rgba(59, 130, 246, .55), transparent 68%);
+    animation: orbFloat 11s ease-in-out infinite;
+}
+.visual-orb-b {
+    width: 220px; height: 220px; left: -70px; bottom: -60px;
+    background: radial-gradient(circle, rgba(14, 165, 233, .42), transparent 68%);
+    animation: orbFloat 14s ease-in-out infinite reverse;
+}
+@keyframes orbFloat {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(14px, -18px, 0) scale(1.08); }
+}
+/* 幽灵 404 水印：小组品牌回声 */
+.visual-404 {
+    position: absolute; right: -14px; bottom: -48px;
+    font-size: 170px; font-weight: 800; line-height: 1;
+    font-variant-numeric: tabular-nums; letter-spacing: .02em;
+    color: rgba(255, 255, 255, .055);
+    user-select: none; pointer-events: none;
+}
+.visual-brand { position: relative; display: flex; align-items: center; gap: 12px; }
+/* 徽章底色与左栏渐变同为深蓝，必须加一圈浅色描边，否则下缘会和背景糊在一起 */
+.brand-mark {
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .24), 0 6px 18px rgba(2, 6, 23, .35);
+}
+.brand-word { font-size: 16px; font-weight: 700; letter-spacing: .14em; color: rgba(255, 255, 255, .92); }
+.visual-main { position: relative; }
+.visual-main h1 {
+    margin: 0 0 10px; font-size: 32px; font-weight: 700;
+    letter-spacing: .04em; color: #fff;
+}
+.visual-sub { margin: 0 0 18px; font-size: 13px; color: rgba(191, 219, 254, .9); }
+.visual-tag {
+    margin: 0; padding-left: 12px; font-size: 12.5px;
+    color: rgba(255, 255, 255, .68);
+    border-left: 2px solid rgba(96, 165, 250, .75);
+}
+.visual-foot {
+    position: relative; font-size: 11.5px;
+    color: rgba(255, 255, 255, .45); letter-spacing: .04em;
+}
+
+/* ---------- 右：登录表单区 ---------- */
+.login-panel { flex: 1; display: flex; align-items: center; justify-content: center; background: #fff; }
+.panel-inner { width: 100%; max-width: 340px; padding: 38px 30px; }
+.panel-head { margin-bottom: 26px; }
+.panel-head h2 {
+    margin: 0 0 6px; font-size: 22px; font-weight: 700;
+    color: #0F172A; letter-spacing: .02em;
+}
+.panel-head p { margin: 0; font-size: 12.5px; color: #64748B; }
+
+.field { margin-bottom: 16px; }
+.field label {
+    display: block; margin-bottom: 7px;
+    font-size: 12.5px; font-weight: 600; color: #334155;
+}
+.input-wrap { position: relative; display: flex; align-items: center; }
+.input-icon {
+    position: absolute; left: 12px; width: 17px; height: 17px;
+    color: #94A3B8; pointer-events: none; transition: color .2s;
+}
+.input-wrap input {
+    width: 100%; height: 44px; padding: 0 14px 0 38px;
+    border: 1px solid #E2E8F0; border-radius: 8px;
+    background: #F8FAFC; color: #0F172A;
+    font-size: 13.5px; outline: none;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+}
+.input-wrap input::placeholder { color: #A8B3C2; }
+.input-wrap input:focus {
+    border-color: #3B82F6; background: #fff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
+}
+.input-wrap:focus-within .input-icon { color: #3B82F6; }
+/* 密码框右侧给显隐按钮留位 */
+#password { padding-right: 42px; }
+.pwd-toggle {
+    position: absolute; right: 6px;
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; padding: 0;
+    border: 0; border-radius: 6px; background: transparent;
+    color: #94A3B8; cursor: pointer;
+    transition: color .18s, background .18s;
+}
+.pwd-toggle:hover { color: #2563EB; background: rgba(59, 130, 246, .09); }
+.pwd-toggle svg { width: 17px; height: 17px; }
+.pwd-toggle .ico-eye-off { display: none; }
+.pwd-toggle.is-on .ico-eye { display: none; }
+.pwd-toggle.is-on .ico-eye-off { display: block; }
+
+/* 登录失败提示：页面内反馈，替代 alert() */
+.login-error {
+    margin-bottom: 14px; padding: 9px 12px;
+    border: 1px solid #FECDD3; border-left: 3px solid #E11D48; border-radius: 6px;
+    background: #FDEEF1; color: #BE123C; font-size: 12.5px;
+}
+
 .btn-login {
-    width: 100%; height: 40px; border: 0; border-radius: 6px; color: #fff;
-    font-weight: 600; letter-spacing: .3em; text-indent: .3em;
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    width: 100%; height: 44px; border: 0; border-radius: 8px; color: #fff;
+    font-size: 14px; font-weight: 600; letter-spacing: .3em; text-indent: .3em;
+    cursor: pointer;
+    background: linear-gradient(135deg, #2563EB, #1D4ED8);
     box-shadow: 0 8px 20px rgba(37, 99, 235, .28);
-    transition: background .15s, box-shadow .15s;
+    transition: transform .18s, box-shadow .18s, background .18s;
 }
 .btn-login:hover:not(:disabled) {
-    background: linear-gradient(135deg, #1d4ed8, #1e40af);
-    box-shadow: 0 10px 24px rgba(37, 99, 235, .36);
+    background: linear-gradient(135deg, #1D4ED8, #1E40AF);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(37, 99, 235, .38);
 }
-.btn-login:disabled { opacity: .7; }
+.btn-login:active:not(:disabled) { transform: translateY(0); }
+.btn-login:disabled { opacity: .72; cursor: not-allowed; box-shadow: none; }
+
+/* 演示账号提示区 */
+.demo-box {
+    margin-top: 22px; padding: 12px 14px;
+    border: 1px solid #DBEAFE; border-radius: 8px; background: #EFF6FF;
+}
+.demo-title { margin-bottom: 8px; font-size: 11.5px; font-weight: 600; color: #1D4ED8; }
+.demo-list {
+    display: flex; flex-wrap: wrap; gap: 6px 14px;
+    margin: 0; padding: 0; list-style: none;
+}
+.demo-list li { font-size: 11.5px; color: #64748B; }
+.demo-list li b { margin-right: 5px; font-weight: 600; color: #1E3A8A; }
+
 @keyframes loginRise {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: none; }
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: none; }
 }
+
+/* ---------- 底部：版权与小组分工（署名区，刻意做大以突出是小组自己的作品） ---------- */
+.login-footer { position: relative; z-index: 1; text-align: center; margin-bottom: auto; }
+.foot-line {
+    font-size: 14px; letter-spacing: .02em;
+    color: rgba(255, 255, 255, .62);
+}
+.foot-line b { font-weight: 700; color: #fff; }
+.foot-sub {
+    margin-top: 5px; font-size: 12.5px;
+    color: rgba(191, 219, 254, .78); letter-spacing: .04em;
+}
+.foot-team {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+    margin: 14px 0 0; padding: 0; list-style: none;
+}
+/* 每人一块：左侧姓名首字方块 + 右侧「姓名 / 分工」两行，分工常驻显示 */
+.foot-team li {
+    display: flex; align-items: center; gap: 11px;
+    padding: 10px 20px 10px 11px;
+    border: 1px solid rgba(255, 255, 255, .16); border-radius: 10px;
+    background: rgba(255, 255, 255, .07);
+    text-align: left;
+    transition: background .2s, border-color .2s, transform .2s;
+}
+.foot-team li:hover {
+    background: rgba(255, 255, 255, .13);
+    border-color: rgba(147, 197, 253, .5);
+    transform: translateY(-2px);
+}
+.foot-team .ava {
+    display: flex; align-items: center; justify-content: center; flex: none;
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    color: #fff; font-size: 16px; font-weight: 700;
+    box-shadow: 0 4px 12px rgba(29, 78, 216, .45);
+}
+.foot-team .who { display: flex; flex-direction: column; line-height: 1.34; }
+.foot-team .name { font-size: 17px; font-weight: 700; color: #fff; letter-spacing: .06em; }
+.foot-team .role { font-size: 12.5px; color: rgba(191, 219, 254, .82); }
+
+/* ---------- 响应式：窄屏改为上下堆叠，品牌区收成顶部条 ---------- */
+@media (max-width: 900px) {
+    .login-shell { flex-direction: column; max-width: 420px; min-height: 0; }
+    .login-visual { flex: none; padding: 26px 26px 22px; }
+    .visual-main h1 { font-size: 24px; }
+    .visual-sub { margin-bottom: 0; }
+    .visual-tag, .visual-foot, .visual-404 { display: none; }
+    .panel-inner { max-width: none; padding: 28px 26px 32px; }
+    /* 分工卡片在窄屏收紧，避免占掉太多竖向空间 */
+    .foot-line { font-size: 12.5px; }
+    /* 窄屏放不下一整句：去掉「·」分隔符，把课程设计名另起一行，
+       固定断点比让浏览器自由折行更整齐（不会把「小组」拆开） */
+    .foot-sep { display: none; }
+    .foot-org { display: block; }
+    .foot-sub { font-size: 11.5px; }
+    .foot-team { gap: 8px; }
+    .foot-team li { gap: 8px; padding: 7px 12px 7px 8px; }
+    .foot-team .ava { width: 28px; height: 28px; border-radius: 8px; font-size: 13px; }
+    .foot-team .name { font-size: 14px; }
+    .foot-team .role { font-size: 11px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .login-card { animation: none; }
+    .login-shell { animation: none; }
+    .visual-orb { animation: none; }
 }
 
 /* ================= SQL 展示区 ================= */
