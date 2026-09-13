@@ -3,7 +3,7 @@
 > **404 Not Found 小组** · 数据库课程设计项目
 > 项目代号：**HRMS-404**（Human Resource Management System × 404 Not Found）
 
-一个基于 **Java + Spring Boot + MySQL** 的人事管理系统课程设计项目。系统覆盖部门、员工、考勤、薪资等核心人事业务，并将**数据库理论**（范式设计、视图、存储过程、触发器）与 **AI 大模型应用**（DeepSeek V4 Flash 自然语言转 SQL）结合，作为本项目区别于一般增删改查系统的亮点。
+一个基于 **Java + Spring Boot + MySQL** 的人事管理系统课程设计项目。系统覆盖部门、员工、考勤、薪资等核心人事业务，并将**数据库理论**（范式设计、视图、存储过程、触发器）与 **AI 大模型应用**（DeepSeek Flash 自然语言转 SQL）结合，作为本项目区别于一般增删改查系统的亮点。
 
 **当前状态：全量功能已完成并本地运行通过**（数据库层 + 后端 API + 前端页面 + Text to SQL + RBAC）。
 
@@ -52,7 +52,7 @@ java -jar target/hrms-404-4.0.4.jar    # 浏览器打开 http://localhost:8080/l
 | ORM 持久层 | MyBatis-Plus 3.5 | 简化 CRUD、分页插件、存储过程调用 |
 | 前端 | Thymeleaf + Bootstrap 5（本地化） | 服务端渲染响应式页面 |
 | 数据库 | MySQL 8.0 | 视图 / 存储过程 / 触发器 |
-| AI 大模型 | DeepSeek V4 Flash API | Text to SQL 自然语言查询（OpenAI 兼容协议） |
+| AI 大模型 | DeepSeek Flash API | Text to SQL 自然语言查询（OpenAI 兼容协议） |
 
 ## 功能模块（已实现）
 
@@ -64,7 +64,7 @@ java -jar target/hrms-404-4.0.4.jar    # 浏览器打开 http://localhost:8080/l
 | 考勤打卡 | 每日一卡（重复打卡 409）、9:00/18:00 自动判定迟到早退、月度汇总视图 |
 | 薪资管理 | 存储过程 `sp_generate_monthly_salary` 幂等批量生成、实发工资触发器计算、绩效/扣款调整 |
 | 用户权限 | 会话登录 + MD5 加盐（盐 `404n0tf0und`）、RBAC 角色（页面/接口双层）、经理数据范围=部门子树 |
-| **Text to SQL** | 真实表结构注入提示词 → DeepSeek V4 Flash 生成 → 白名单安全校验 → 执行渲染 + Excel 导出 |
+| **Text to SQL** | 真实表结构注入提示词 → DeepSeek Flash 生成 → 白名单安全校验 → 执行渲染 + Excel 导出 |
 | 仪表盘 | 按角色差异化统计（全公司 / 部门子树 / 个人） |
 
 ## 数据库设计亮点（课程评分点）
@@ -105,7 +105,7 @@ java -jar target/hrms-404-4.0.4.jar    # 浏览器打开 http://localhost:8080/l
 
 ## 文档
 
-- [开发文档.md](开发文档.md)：分层架构、数据库设计思路、RESTful API 规范、Text to SQL 设计、DeepSeek V4 Flash 接入设计、404 特征元素设计
+- [开发文档.md](开发文档.md)：分层架构、数据库设计思路、RESTful API 规范、Text to SQL 设计、DeepSeek Flash 接入设计、404 特征元素设计
 
 ---
 

@@ -23,7 +23,7 @@ public class TextToSqlController {
 
     private final TextToSqlService textToSqlService;
 
-    /** 自然语言 → DeepSeek V4 Flash → 安全校验 → 执行 → 结果表格 */
+    /** 自然语言 → DeepSeek Flash → 安全校验 → 执行 → 结果表格 */
     @PostMapping
     public Result<Map<String, Object>> ask(@RequestBody Map<String, String> body) {
         Roles.require(Roles.of(Roles.ADMIN, Roles.HR, Roles.MANAGER));

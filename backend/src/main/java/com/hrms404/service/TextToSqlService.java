@@ -23,7 +23,7 @@ import java.util.Map;
 /**
  * Text to SQL 服务：
  * 1. 读取 information_schema 拼装系统提示词（真实表结构，与数据库同步）
- * 2. 调用 DeepSeek V4 Flash API（OpenAI 兼容协议 POST /chat/completions）
+ * 2. 调用 DeepSeek Flash API（OpenAI 兼容协议 POST /chat/completions）
  * 3. SQL 安全白名单校验（仅 SELECT、禁系统库/危险函数、强制 LIMIT、单语句）
  * 4. 执行并把列名映射为数据库字段中文注释返回
  */
@@ -133,9 +133,17 @@ public class TextToSqlService {
                     "temperature", 0,
                     "max_tokens", 4000,
                     "stream", false,
-                    // 关键：强制关闭思考模式。V4 Flash 未显式指定时可能返回 reasoning_content，
-                    // 复杂问题下推理过程会耗尽 max_tokens 导致 content 为空（"AI 未返回有效 SQL"）。
-                    "thinking_mode", "non-thinking"
+                    // 思考模式：显式开启，但把推理强度压到 low。三档实测对照（同批问题）：
+                    //   thinking.type=disabled  → 0.7~0.8s，0 推理 token。但「研发中心及其所有子部门」
+                    //        会生成 UNION 硬编码两层的写法。本库部门树恰好只有 3 层，该写法结论仍对；
+                    //        一旦部门层级加深就会漏掉更深的分支 —— 而它依旧是合法 SELECT，
+                    //        后置的安全校验拦不住，属于「能跑但结果可能不准」。
+                    //   reasoning_effort=low    → 1.0~1.5s，稳定生成 WITH RECURSIVE，对层级深度不敏感。
+                    //   默认强度                 → 6~7s，同样正确但明显更慢。
+                    // 取 low：多花约半秒换取对多层部门树的结构健壮性，同时比默认强度快数倍。
+                    // 旧参数 thinking_mode=non-thinking 是上一代 API 写法，实测只能部分压制推理，已弃用。
+                    "thinking", Map.of("type", "enabled"),
+                    "reasoning_effort", "low"
             );
 
             // DeepSeek 偶发返回空 content（同为 non-thinking 也有概率出现），最多尝试 3 次
@@ -192,7 +200,9 @@ public class TextToSqlService {
         }
         JsonNode root = objectMapper.readTree(resp.body());
         JsonNode content = root.path("choices").path(0).path("message").path("content");
-        String text = content.isMissingNode() ? "" : content.asText();
+        // 只有真正的字符串才算有效内容：content 缺失或为 JSON null 时都按「空」处理。
+        // 否则 NullNode.asText() 会返回字面量 "null" 被当作有效 SQL 送进校验，报出误导性的错误。
+        String text = content.isTextual() ? content.asText() : "";
         if (text.isBlank()) {
             // 只记录结束原因便于排查，不落原始响应/问题内容
             JsonNode finish = root.path("choices").path(0).path("finish_reason");
