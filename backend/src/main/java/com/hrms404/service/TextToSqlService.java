@@ -7,6 +7,7 @@ import com.hrms404.config.DeepSeekProps;
 import com.hrms404.mapper.StatMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -212,8 +213,13 @@ public class TextToSqlService {
         return stripCodeFence(text);
     }
 
-    /** SQL 安全校验：仅 SELECT/WITH 开头、禁危险关键词、单条语句、强制 LIMIT */
-    private String validateAndForceLimit(String raw) {
+    /**
+     * SQL 安全校验：仅 SELECT/WITH 开头、禁危险关键词、单条语句、强制 LIMIT
+     *
+     * <p>返回值显式声明为非空：本方法要么抛 {@link BizException}，要么返回校验后的 SQL，
+     * 不存在返回 null 的分支。声明后调用处的局部变量也会带上非空类型。
+     */
+    private @NonNull String validateAndForceLimit(String raw) {
         String sql = raw == null ? "" : raw.trim().replaceAll(";\\s*$", "");
         String upper = sql.toUpperCase();
         if (!upper.startsWith("SELECT") && !upper.startsWith("WITH")) {
