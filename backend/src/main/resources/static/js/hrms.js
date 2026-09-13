@@ -6,7 +6,7 @@
 /** 顶栏渲染的当前登录用户（由 Thymeleaf 注入 #ctx data-* 属性） */
 const ctxEl = document.getElementById("ctx");
 const CTX = ctxEl ? Object.fromEntries(
-    ["username", "empName", "empId", "role", "roleName"].map(k => [k, (ctxEl.dataset[k] ?? "").trim()])
+    ["userId", "username", "empName", "empId", "role", "roleName"].map(k => [k, (ctxEl.dataset[k] ?? "").trim()])
 ) : {};
 
 function isRole(...roles) { return roles.includes(CTX.role); }
@@ -47,9 +47,24 @@ function toast(msg, type = "success", ms = 2600) {
     setTimeout(() => t.remove(), ms);
 }
 
-/** fetch 封装：自动解析 Result{code,message,data}，失败弹 toast 并返回 null */
+/** fetch 封装：自动解析 Result{code,message,data}，失败弹 toast 并返回 null。
+ *
+ * 返回约定（读写分开，因为 null 在两处的含义不同）：
+ * - 写操作 POST/PUT/DELETE：成功一律返回「非 null」。后端 Result<Void> 接口（改密码、
+ *   离职、删除等）data 为 null，这里用 true 作成功哨兵，调用方统一的 `if (r !== null)`
+ *   才成立，不会再把「成功但无返回内容」误判为失败而漏掉 toast 和列表刷新。
+ * - 读操作 GET：原样返回 data。GET 的 data=null 是有效业务语义
+ *   （如 /api/attendance/today 的「今日未打卡」），不能替换掉。
+ * 用 ?? 而非 ||：data 为 0（如薪资生成 0 条）是有效业务值，必须原样返回。 */
 async function api(url, options) {
-    const resp = await fetch(url, Object.assign({ headers: { "Content-Type": "application/json" } }, options));
+    let resp;
+    try {
+        resp = await fetch(url, Object.assign({ headers: { "Content-Type": "application/json" } }, options));
+    } catch (e) {
+        // 后端未启动 / 网络中断：给出提示而不是抛出未处理的 Promise 异常
+        toast("无法连接服务器，请确认后端已启动", "error", 3600);
+        return null;
+    }
     let json = null;
     try { json = await resp.json(); } catch (e) { /* 非 JSON 响应 */ }
     if (!json) { toast("服务器响应异常", "error"); return null; }
@@ -59,8 +74,9 @@ async function api(url, options) {
         return null;
     }
     if (json.code !== 200) { toast(json.message || "操作失败", "error", 3600); return null; }
-    if (options && options.silent === undefined || !options) { /* 不弹成功提示，由调用方决定 */ }
-    return json.data;
+    const method = ((options && options.method) || "GET").toUpperCase();
+    if (method === "GET") return json.data === undefined ? null : json.data;
+    return json.data ?? true;
 }
 
 /** 通用确认弹窗 */
@@ -114,45 +130,77 @@ const empStatusBadge = s => s === 1
     ? '<span class="status-pill status-on">在职</span>'
     : '<span class="status-pill status-off">已离职</span>';
 
-/* ---------- CSV 导出 ---------- */
-function exportCSV(filename, headers, rows) {
-    const escapeCell = v => {
-        let s = v === null || v === undefined ? "" : String(v);
-        // 防止 Excel 公式注入：以 = + - @ 开头的单元格加前导单引号并按文本处理
-        if (/^[=+\-@]/.test(s)) s = "'" + s;
-        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const lines = [headers.map(h => escapeCell(h.label)).join(",")];
-    rows.forEach(r => lines.push(headers.map(h => escapeCell(r[h.key])).join(",")));
-    // BOM 前缀保证 Excel 以 UTF-8 打开不乱码
-    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(a.href);
-}
+/* ---------- Excel(.xlsx) 导出 ----------
+   后端用 Apache POI 生成真正的 .xlsx（不是 CSV 改名），前端只负责把二进制流落盘。
 
-/* ---------- Excel(.xlsx) 导出：原生表单提交，由浏览器直接按服务器文件名下载 ----------
-   不经过 Blob/download 属性，从根本上规避部分浏览器/下载管理器
-   忽略 download 属性、使用随机 UUID 文件名的问题 */
-function exportXlsx(filename, columns, rows) {
+   这里必须走 fetch，不能用原生 form 提交。form 提交等于把响应交给浏览器去「导航」：
+   浏览器会先拿当前页面去加载这个响应，发现是附件才中止导航改成下载 —— 成功时页面会闪一下，
+   失败时（会话过期返回 401 JSON、参数异常返回 400 JSON、服务端异常返回错误页）
+   这串响应会直接替换掉当前页面，用户看到的就是「点一下导出，整个页面没了」。
+   走 fetch 则非文件响应全部留在 JS 里转成 toast，页面毫发无损。
+
+   返回 true 表示已拿到文件并触发下载；调用方据此决定要不要提示「已导出」。 */
+async function exportXlsx(filename, columns, rows) {
     // 文件名防御：强制携带 .xlsx 后缀
     if (!/\.xlsx$/i.test(filename || "")) {
         filename = (filename || "导出数据") + ".xlsx";
     }
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = "/api/export/xlsx";
-    form.style.display = "none";
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = "data";
-    input.value = JSON.stringify({ filename, columns, rows });
-    form.appendChild(input);
-    document.body.appendChild(form);
-    form.submit();     // 原生提交 → 浏览器下载 → 遵循 Content-Disposition 文件名
-    form.remove();
+
+    let resp;
+    try {
+        resp = await fetch("/api/export/xlsx", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename, columns, rows })
+        });
+    } catch (e) {
+        toast("无法连接服务器，导出失败", "error", 3600);
+        return false;
+    }
+
+    // 只有 xlsx 的 MIME 才是文件；其余一律按失败处理（统一 Result JSON / 错误页）
+    const ct = resp.headers.get("content-type") || "";
+    if (!resp.ok || !ct.includes("spreadsheetml")) {
+        if (resp.status === 401) {
+            toast("登录已过期，正在跳转…");
+            setTimeout(() => location.href = "/login", 800);
+            return false;
+        }
+        let msg = "导出失败，请稍后重试";
+        try {
+            const err = await resp.json();
+            if (err && err.message) msg = err.message;
+        } catch (e) { /* 非 JSON（如 500 错误页），保留默认提示 */ }
+        toast(msg, "error", 3600);
+        return false;
+    }
+
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filenameFromDisposition(resp.headers.get("content-disposition")) || filename;
+    // 必须先入文档再点击：游离节点上的 click() 在部分浏览器不触发下载
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // 必须延迟释放：点击后浏览器是异步去读 blob 的，同步 revoke 会把流掐断，
+    // 轻则文件损坏，重则文件名回退成 blob URL 的随机 UUID
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    return true;
+}
+
+/** 解析 Content-Disposition 里的文件名：优先 RFC 5987 的 filename*（中文走这里），退回 ASCII 的 filename */
+function filenameFromDisposition(disposition) {
+    if (!disposition) return "";
+    const star = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+    if (star) {
+        try {
+            return decodeURIComponent(star[1]);
+        } catch (e) { /* 编码异常则走下面的 ASCII 兜底 */ }
+    }
+    const plain = /filename="?([^";]+)"?/i.exec(disposition);
+    return plain ? plain[1] : "";
 }
 
 /** 渲染 Bootstrap 表格数据行 */

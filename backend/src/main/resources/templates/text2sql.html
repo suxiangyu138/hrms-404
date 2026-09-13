@@ -13,7 +13,7 @@
         <div>
             <h1 class="page-title">AI 智能查询 · Text to SQL</h1>
             <div class="page-sub">
-                自然语言 → <b>DeepSeek V4 Flash</b>（<code>/chat/completions</code>，OpenAI 兼容）→ SQL 安全校验 → 执行查询
+                自然语言 → <b>DeepSeek Flash</b>（<code>/chat/completions</code>，OpenAI 兼容）→ SQL 安全校验 → 执行查询
             </div>
         </div>
     </div>
@@ -32,7 +32,7 @@
                               placeholder="例如：统计每个部门的在职员工人数"></textarea>
                     <div class="form-text">
                         安全约束：仅允许 SELECT；禁止系统库/危险函数；强制 LIMIT 100；单条语句。<br>
-                        该功能调用 DeepSeek V4 Flash API，需要环境变量 DEEPSEEK_API_KEY。
+                        该功能调用 DeepSeek Flash API，需要环境变量 DEEPSEEK_API_KEY。
                     </div>
                     <button class="btn mt-3 px-4 fw-semibold" id="askBtn" style="background:#e11d48;color:#fff;border:0"
                             onclick="ask()">🚀 生成并查询</button>
@@ -150,9 +150,11 @@
 
     async function exportResult() {
         if (!lastResult) return;
-        await exportXlsx(`AI查询结果_${dateNow()}.xlsx`,
-            lastResult.columns, lastResult.rows);
-        toast("Excel 已导出");
+        // 只有真的拿到文件才提示成功：失败时 exportXlsx 内部已经弹过错误提示
+        if (await exportXlsx(`AI查询结果_${dateNow()}.xlsx`,
+            lastResult.columns, lastResult.rows)) {
+            toast("Excel 已导出");
+        }
     }
 </script>
 </body>

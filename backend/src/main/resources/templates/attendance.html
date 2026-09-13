@@ -233,8 +233,10 @@
             earlyCnt: r.earlyCnt,
             rate: Math.round(r.normalCnt * 100 / Math.max(1, r.workDays)) + "%"
         }));
-        await exportXlsx(`考勤汇总_${document.getElementById("sumMonth").value}.xlsx`, columns, rows);
-        toast("Excel 已导出");
+        // 只有真的拿到文件才提示成功：失败时 exportXlsx 内部已经弹过错误提示
+        if (await exportXlsx(`考勤汇总_${document.getElementById("sumMonth").value}.xlsx`, columns, rows)) {
+            toast("Excel 已导出");
+        }
     }
 
     (async () => {

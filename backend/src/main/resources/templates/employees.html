@@ -304,8 +304,10 @@
             { key: "statusText", label: "状态" }
         ];
         const rows = list.map(e => ({ ...e, statusText: e.status === 1 ? "在职" : "已离职" }));
-        await exportXlsx(`员工列表_${dateNow()}.xlsx`, columns, rows);
-        toast("Excel 已导出");
+        // 只有真的拿到文件才提示成功：失败时 exportXlsx 内部已经弹过错误提示
+        if (await exportXlsx(`员工列表_${dateNow()}.xlsx`, columns, rows)) {
+            toast("Excel 已导出");
+        }
     }
 
     async function leaveEmp(id, name) {

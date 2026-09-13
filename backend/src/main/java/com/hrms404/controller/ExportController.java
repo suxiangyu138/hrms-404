@@ -1,8 +1,6 @@
 package com.hrms404.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hrms404.common.ExportRequest;
-import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Font;
@@ -13,8 +11,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.ByteArrayOutputStream;
@@ -25,28 +23,17 @@ import java.util.Map;
 
 /**
  * 通用 Excel 导出接口：
- * 前端通过原生 form 表单提交（data 字段为 JSON），后端用 Apache POI 生成 .xlsx 返回。
- * 原生表单下载由浏览器直接处理，遵循服务器 Content-Disposition 文件名，
- * 不依赖 Blob/download 属性，兼容所有浏览器与下载管理器。
+ * 前端 POST JSON 列定义 + 数据行，后端用 Apache POI 生成真正的 .xlsx 返回。
+ * 出错时返回统一 Result JSON（HTTP 4xx/5xx），前端据 Content-Type 区分「文件」与「错误」，
+ * 不会把错误响应当成文件下载，也不会让浏览器拿错误响应去导航掉当前页面。
  */
 @RestController
 @RequestMapping("/api/export")
-@RequiredArgsConstructor
 public class ExportController {
 
-    private final ObjectMapper objectMapper;
-
-    @PostMapping(value = "/xlsx", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public ResponseEntity<?> exportXlsx(@RequestParam("data") String data) throws IOException {
-        ExportRequest request;
-        try {
-            request = objectMapper.readValue(data, ExportRequest.class);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("code", 400, "message", "导出参数解析失败，请重试", "data", ""));
-        }
-        if (request.getColumns() == null || request.getColumns().isEmpty()) {
+    @PostMapping("/xlsx")
+    public ResponseEntity<?> exportXlsx(@RequestBody ExportRequest request) throws IOException {
+        if (request == null || request.getColumns() == null || request.getColumns().isEmpty()) {
             return ResponseEntity.badRequest()
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(Map.of("code", 400, "message", "导出列定义不能为空", "data", ""));

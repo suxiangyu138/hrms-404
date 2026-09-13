@@ -178,8 +178,10 @@
             { key: "deduction", label: "扣款" }, { key: "actualSalary", label: "实发工资" },
             { key: "createdAt", label: "生成时间" }
         ];
-        await exportXlsx(`薪资_${month}.xlsx`, columns, curRows);
-        toast("Excel 已导出");
+        // 只有真的拿到文件才提示成功：失败时 exportXlsx 内部已经弹过错误提示
+        if (await exportXlsx(`薪资_${month}.xlsx`, columns, curRows)) {
+            toast("Excel 已导出");
+        }
     }
 
     (async () => {
