@@ -170,7 +170,7 @@ java -jar target/hrms-404-4.0.4.jar     # 打开 http://localhost:8080/login
 
 **规范化等级**：部门名、职位名、职位基本工资等会造成传递依赖的字段一律拆表，前端展示需要的冗余联查由视图承担，而不是在表里留冗余列。候选键按「主键 + 全部 UNIQUE 约束」计：`employee` 的 `emp_no` 与 `phone`、`sys_user` 的 `username` 与 `emp_id`、`attendance` 的 `(emp_id, work_date)`、`salary` 的 `(emp_id, salary_month)` 都是候选键。
 
-- `department` / `position` / `attendance` / `salary` / `sys_user`：所有非平凡函数依赖的决定因素都是候选键，**满足 BCNF**。
+- `department` / `position` / `attendance` / `salary` / `sys_user`：所有非平凡函数依赖的决定因素都是候选键，**满足 BCNF**。前两张只有单列主键，schema 上也没有名称唯一约束——应用层只在新增部门时查重（`DepartmentService.create`），更新时不校验，所以「名称 → 编号」不算 schema 保证的函数依赖，判定时不把它计入。
 - `employee`：唯一的判断题。它同时存 `dept_id` 与 `position_id`，若把「职位决定其归属部门」当作函数依赖，`emp_id → position_id → dept_id` 就是一条对非主属性的传递依赖，等级会掉到 2NF。本项目按业务语义把两者视为**相互独立的事实**——「员工所属部门」与「所任职位归属部门」是两回事，跨部门任职、借调都是合法情形，因此不构成传递依赖，**仍满足 BCNF**。
 
 这个判断是有依据而非事后找补：数据库层既没有约束、应用层 `validate()` 也只校验两个字段非空、不校验二者一致，UI 的下拉联动（`positionsOfDept`）只是录入便利，不是完整性规则。当前种子数据里恰好 0 条不一致记录，但那是数据现状，不是 schema 的约束。
