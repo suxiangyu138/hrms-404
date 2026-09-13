@@ -57,4 +57,10 @@ public class PageController {
     public String my() {
         return "my";
     }
+
+    /** 账号管理（ADMIN / HR）：开通账号、改角色、重置密码、启停 */
+    @GetMapping("/users")
+    public String users() {
+        return "users";
+    }
 }

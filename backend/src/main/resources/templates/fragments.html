@@ -10,32 +10,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${title} + ' · HRMS-404'">页面 · HRMS-404</title>
     <link rel="stylesheet" th:href="@{/vendor/bootstrap.min.css(v=4)}">
-    <link rel="stylesheet" th:href="@{/css/hrms.css(v=4)}">
+    <link rel="stylesheet" th:href="@{/css/hrms.css(v=12)}">
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
 </head>
 
 <!-- ========== 左侧菜单栏片段（220px） ========== -->
 <aside class="app-side" th:fragment="sidebar(active)">
     <div class="side-brand">
-        <svg class="brand-404" width="34" height="34" viewBox="0 0 44 44" role="img" aria-label="404 Not Found 小组">
+        <svg class="brand-404" width="34" height="34" viewBox="0 0 48 48" role="img" aria-label="人事管理系统">
             <defs>
-                <linearGradient id="lg404" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stop-color="#2563eb"/>
-                    <stop offset="1" stop-color="#0ea5e9"/>
-                </linearGradient>
-                <linearGradient id="strike404" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stop-color="#f43f5e"/>
-                    <stop offset="1" stop-color="#e11d48"/>
+                <linearGradient id="hrBgSide" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#1E3A8A"/>
+                    <stop offset="1" stop-color="#0B1E54"/>
                 </linearGradient>
             </defs>
-            <rect width="44" height="44" rx="11" fill="url(#lg404)"/>
-            <rect x="1.2" y="1.2" width="41.6" height="41.6" rx="10" fill="none"
-                  stroke="rgba(255,255,255,.4)" stroke-width="1"/>
-            <text x="22" y="28.5" text-anchor="middle" fill="#ffffff"
-                  font-family="Segoe UI, PingFang SC, sans-serif"
-                  font-size="19" font-weight="700" letter-spacing=".5">404</text>
-            <line x1="8.5" y1="31.5" x2="35.5" y2="16.5" stroke="url(#strike404)"
-                  stroke-width="2.6" stroke-linecap="round"/>
+
+            <rect width="48" height="48" rx="12" fill="url(#hrBgSide)"/>
+
+            <!-- 抽象 H / 双人连接结构 -->
+            <rect x="15" y="15" width="4" height="18" rx="2" fill="#FFFFFF"/>
+            <rect x="29" y="15" width="4" height="18" rx="2" fill="#FFFFFF"/>
+            <rect x="19" y="22" width="10" height="4" rx="2" fill="#FFFFFF"/>
+
+            <!-- 中心节点 -->
+            <circle cx="24" cy="24" r="2.8" fill="#38BDF8"/>
         </svg>
         <div class="brand-name">
             <b>人事管理系统</b>
@@ -63,6 +61,10 @@
         <a class="side-link" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR' or session.LOGIN_USER.roleCode == 'MANAGER'}"
            th:classappend="${active=='text2sql'}?'active'" th:href="@{/text2sql}">AI 智能查询</a>
 
+        <div class="side-label" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR'}">系统管理</div>
+        <a class="side-link" th:if="${session.LOGIN_USER.roleCode == 'ADMIN' or session.LOGIN_USER.roleCode == 'HR'}"
+           th:classappend="${active=='users'}?'active'" th:href="@{/users}">账号管理</a>
+
         <div class="side-label" th:if="${session.LOGIN_USER.empId != null}">个人</div>
         <a class="side-link" th:if="${session.LOGIN_USER.empId != null}"
            th:classappend="${active=='my'}?'active'" th:href="@{/my}">我的中心</a>
@@ -73,7 +75,8 @@
 <!-- ========== 顶部导航栏片段（56px，含会话注入） ========== -->
 <div th:fragment="topbar(active)">
     <!-- 会话注入：页面 JS 读取 data-* 获取当前用户 -->
-    <div id="ctx" class="d-none" th:attr="data-username=${session.LOGIN_USER.username},
+    <div id="ctx" class="d-none" th:attr="data-user-id=${session.LOGIN_USER.userId},
+        data-username=${session.LOGIN_USER.username},
         data-emp-name=${session.LOGIN_USER.empName},
         data-emp-id=${session.LOGIN_USER.empId},
         data-role=${session.LOGIN_USER.roleCode},
@@ -88,7 +91,8 @@
                         : (active == 'attendance' ? '考勤打卡'
                         : (active == 'salaries' ? '薪资管理'
                         : (active == 'text2sql' ? 'AI 智能查询'
-                        : (active == 'my' ? '我的中心' : '人事管理系统')))))))}">人事管理系统</span>
+                        : (active == 'users' ? '账号管理'
+                        : (active == 'my' ? '我的中心' : '人事管理系统'))))))))}">人事管理系统</span>
             <span class="app-top-sub ms-2">v4.0.4</span>
         </div>
         <div class="user-menu">
@@ -142,7 +146,7 @@
 <!-- ========== 底部资源片段 ========== -->
 <div th:fragment="scripts">
     <script th:src="@{/vendor/bootstrap.bundle.min.js(v=4)}"></script>
-    <script th:src="@{/js/hrms.js(v=4)}"></script>
+    <script th:src="@{/js/hrms.js(v=7)}"></script>
     <script>
         console.log("%c 404 Not Found %c 页面已找到，系统运行正常",
             "background:#2563eb;color:#fff;font-size:14px;padding:4px 8px;border-radius:4px 0 0 4px;font-weight:bold",

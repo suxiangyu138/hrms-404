@@ -32,7 +32,8 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/departments", Set.of("ADMIN", "HR"),
             "/positions", Set.of("ADMIN", "HR"),
             "/salaries", Set.of("ADMIN", "HR"),
-            "/text2sql", Set.of("ADMIN", "HR", "MANAGER")
+            "/text2sql", Set.of("ADMIN", "HR", "MANAGER"),
+            "/users", Set.of("ADMIN", "HR")
     );
 
     @Override
