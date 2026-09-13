@@ -196,6 +196,8 @@ java -jar target/hrms-404-4.0.4.jar     # 打开 http://localhost:8080/login
 `sp_generate_monthly_salary` 里有两处值得说明的取舍：
 
 - **幂等靠 `NOT EXISTS` 子查询**，而不是先 `DELETE` 再 `INSERT`。已手工调整过的薪资记录不会被重跑覆盖，重复点击"生成"也不会产生重复行。
+
+  代价要说清楚：这是**快照语义**，不是实时口径。薪资一旦生成即固定，此后新增的考勤**不会**被补算进去——实测中就有这样一条：某员工 9 月薪资于 9 月 7 日生成（当时只有 1 次早退，扣 20），9 月 12 日新增的迟到记录不会让它变成扣 40。这是保手工调整换来的，两者不可兼得；页面上已注明该行为，避免用户重跑后误以为没生效。
 - **统计值一律 `IFNULL` 兜底为 0**。当月无任何考勤记录的员工，`LEFT JOIN` 后 `late_cnt` 为 `NULL`，而 `deduction` 列是 `NOT NULL`——显式插入 `NULL` 不会回落到 `DEFAULT 0`，而是直接抛 `Column 'deduction' cannot be null` 让**整批 INSERT 失败**。三值逻辑在这里不能靠 `CASE` 兜，必须显式 `IFNULL`。
 
 ### 触发器（4 类 / 5 个对象）
