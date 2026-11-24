@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<!-- HRMS-404 员工管理 -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('员工管理','employees')}"></head>
+<body>
+<div class="layout">
+    <aside th:replace="~{fragments :: sidebar('employees')}"></aside>
+    <div class="main-col">
+        <div th:replace="~{fragments :: topbar('employees')}"></div>
+
+<main class="app-container">
+    <!-- 区域一：页面头部（标题 + 数据总量 + 页面级操作） -->
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">员工管理</h1>
+            <div class="page-sub" id="empCount">正在统计员工数据…</div>
+        </div>
+        <div class="page-extra" id="toolbarAdmin"></div>
+    </div>
+
+    <!-- 区域二：筛选条件栏（浅色背景单行） -->
+    <div class="filter-bar" id="searchForm">
+        <input class="form-control" id="qKeyword" placeholder="搜索姓名或工号" style="width:220px">
+        <select class="form-select" id="qDept" th:if="${session.LOGIN_USER.roleCode != 'MANAGER'}" style="width:180px">
+            <option value="">全部部门</option>
+        </select>
+        <select class="form-select" id="qStatus" style="width:130px">
+            <option value="">全部状态</option>
+            <option value="1">在职</option>
+            <option value="0">已离职</option>
+        </select>
+        <button class="btn btn-brand px-3" onclick="doSearch()">查询</button>
+        <button class="btn btn-outline-brand px-3" onclick="doReset()">重置</button>
+    </div>
+
+    <!-- 区域三：数据表格 -->
+    <div class="card card-panel table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr>
+                    <th>员工</th><th>部门</th><th>职位</th><th>入职日期</th><th>状态</th><th style="width:130px">操作</th>
+                </tr></thead>
+                <tbody id="empBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 区域四：分页控件 -->
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <span class="text-secondary small" id="pageInfo"></span>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-secondary small">每页</span>
+            <select class="form-select form-select-sm" id="pageSize" style="width:74px">
+                <option>5</option><option selected>10</option><option>20</option>
+            </select>
+            <span class="text-secondary small">条</span>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-secondary" id="prevPage">上一页</button>
+                <button class="btn btn-outline-secondary" id="nextPage">下一页</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- 新增/编辑弹窗（分组表单） -->
+<div class="modal fade" id="empModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="empModalTitle">新增员工</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="fEmpId">
+                <div class="field-group-title">任职信息</div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">工号 <span class="text-secondary fw-normal">（留空自动生成）</span></label>
+                        <input class="form-control" id="fEmpNo" placeholder="如 E016" style="background:#f8fafc">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">部门 <span class="req">*</span></label>
+                        <select class="form-select" id="fDept"></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">职位（随部门联动）<span class="req">*</span></label>
+                        <select class="form-select" id="fPos"></select>
+                    </div>
+                </div>
+                <div class="row g-3 mt-1">
+                    <div class="col-md-4">
+                        <label class="form-label">入职日期 <span class="req">*</span></label>
+                        <input type="date" class="form-control" id="fHire" required>
+                    </div>
+                </div>
+                <div class="field-group-title mt-4">基本信息</div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">姓名 <span class="req">*</span></label>
+                        <input class="form-control" id="fEmpName" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">性别</label>
+                        <select class="form-select" id="fGender"><option>男</option><option>女</option></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">出生日期</label>
+                        <input type="date" class="form-control" id="fBirth">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">电话</label>
+                        <input class="form-control" id="fPhone" maxlength="20">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">邮箱</label>
+                        <input type="email" class="form-control" id="fEmail" maxlength="100">
+                    </div>
+                </div>
+                <div class="form-text mt-2">必填项已用红色星号标记；部门切换后职位列表将同步更新。</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-brand px-4" id="empSaveBtn">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <div th:replace="~{fragments :: footer}"></div>
+    </div>
+</div>
+<div th:replace="~{fragments :: scripts}"></div>
+<div th:replace="~{fragments :: globalActions}"></div>
+<script>
+    const role = CTX.role;
+    const CAN_EDIT = role === "ADMIN" || role === "HR";
+    let currentPage = 1, deptOptions = [], EMPTY_ALL = 0;
+
+    async function loadDepts() {
+        if (role === "MANAGER") return;
+        const dept = await api("/api/departments/tree", { silent: true });
+        if (!dept) return;
+        deptOptions = dept.tree;
+        const options = deptOptions.map(d => `<option value="${d.deptId}">${esc(d.deptPath)}</option>`).join("");
+        // 列表页筛选下拉
+        document.getElementById("qDept").innerHTML = '<option value="">全部部门</option>' + options;
+        // 新增/编辑弹窗的部门下拉（必须填充，否则表单选不了部门）
+        document.getElementById("fDept").innerHTML = '<option value="">选择部门</option>' + options;
+    }
+
+    async function loadPositions(deptId, selected) {
+        const sel = document.getElementById("fPos");
+        if (!deptId) {
+            sel.innerHTML = '<option value="">选择职位</option>';
+            return;
+        }
+        const list = await api(`/api/employees/position-options?deptId=${deptId}`, { silent: true });
+        if (list) {
+            sel.innerHTML = '<option value="">选择职位</option>'
+                + list.map(p => `<option value="${p.positionId}">${esc(p.positionName)}（编制 ${p.headcount}）</option>`).join("");
+            if (selected) sel.value = selected;
+        }
+    }
+
+    function params() {
+        const p = new URLSearchParams({ page: currentPage, size: document.getElementById("pageSize").value });
+        const kw = document.getElementById("qKeyword").value.trim();
+        const dept = role === "MANAGER" ? "" : document.getElementById("qDept").value;
+        const status = document.getElementById("qStatus").value;
+        if (kw) p.set("keyword", kw);
+        if (dept) p.set("deptId", dept);
+        if (status !== "") p.set("status", status);
+        return p;
+    }
+
+    async function loadEmployees() {
+        const data = await api("/api/employees?" + params().toString(), { silent: true });
+        const body = document.getElementById("empBody");
+        if (!data) return;
+        document.getElementById("empCount").textContent = `共 ${data.total} 位员工`;
+        if (!data.records.length) {
+            body.innerHTML = `<tr><td colspan="6"><div class="empty-404 mt-3 mb-3">
+                <div class="big">404</div><div class="mt-1">暂无数据，添加第一条吧</div></div></td></tr>`;
+            document.getElementById("pageInfo").textContent = "";
+            return;
+        }
+        body.innerHTML = data.records.map(e => `
+            <tr>
+              <td>
+                <div><b>${esc(e.empNo)} · ${esc(e.empName)}</b></div>
+                <div class="text-secondary" style="font-size:12px">${esc(maskPhone(e.phone))}</div>
+              </td>
+              <td>${esc(e.deptName)}</td>
+              <td>${esc(e.positionName)}</td>
+              <td>${fmtDateZh(e.hireDate)}</td>
+              <td>${e.status === 1
+                    ? '<span class="status-pill status-on">在职</span>'
+                    : '<span class="status-pill status-off">已离职</span>'}</td>
+              <td>
+                ${CAN_EDIT ? `
+                  <button class="btn-text" onclick="editEmp(${e.empId})">编辑</button>
+                  ${e.status === 1
+                      ? `<button class="btn-text btn-text-danger" onclick="leaveEmp(${e.empId},'${esc(e.empName)}')">离职</button>`
+                      : `<button class="btn-text" style="color:var(--green)" onclick="restoreEmp(${e.empId},'${esc(e.empName)}')">复职</button>`}`
+                : `<span class="text-secondary" style="font-size:12.5px">仅查看</span>`}
+              </td>
+            </tr>`).join("");
+        document.getElementById("pageInfo").textContent =
+            `共 ${data.total} 条，第 ${data.page} / ${Math.max(1, Math.ceil(data.total / data.size))} 页`;
+        document.getElementById("prevPage").disabled = data.page <= 1;
+        document.getElementById("nextPage").disabled = data.page * data.size >= data.total;
+    }
+
+    function doSearch() { currentPage = 1; loadEmployees(); }
+    function doReset() {
+        document.getElementById("qKeyword").value = "";
+        document.getElementById("qStatus").value = "";
+        const dept = document.getElementById("qDept");
+        if (dept) dept.value = "";
+        currentPage = 1;
+        loadEmployees();
+    }
+
+    function fillEmpForm(e) {
+        document.getElementById("fEmpId").value = e.empId || "";
+        document.getElementById("fEmpNo").value = e.empNo || "";
+        document.getElementById("fEmpName").value = e.empName || "";
+        document.getElementById("fGender").value = e.gender || "男";
+        document.getElementById("fBirth").value = e.birthDate || "";
+        document.getElementById("fHire").value = e.hireDate || dateNow();
+        document.getElementById("fPhone").value = e.phone || "";
+        document.getElementById("fEmail").value = e.email || "";
+        document.getElementById("fDept").value = e.deptId || "";
+    }
+
+    function openCreate() {
+        document.getElementById("empModalTitle").textContent = "新增员工";
+        fillEmpForm({});
+        document.getElementById("fEmpNo").disabled = false;
+        // 部门与职位留空，由用户选择部门后联动加载职位
+        document.getElementById("fDept").value = "";
+        document.getElementById("fPos").innerHTML = '<option value="">选择职位</option>';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("empModal")).show();
+    }
+
+    async function editEmp(id) {
+        const e = await api("/api/employees/" + id, { silent: true });
+        if (!e) return;
+        document.getElementById("empModalTitle").textContent = "编辑员工";
+        fillEmpForm(e);
+        document.getElementById("fEmpNo").disabled = true;
+        await loadPositions(e.deptId, e.positionId);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("empModal")).show();
+    }
+
+    document.getElementById("fDept").addEventListener("change", e => loadPositions(e.target.value, null));
+    document.getElementById("prevPage").onclick = () => { if (currentPage > 1) { currentPage--; loadEmployees(); } };
+    document.getElementById("nextPage").onclick = () => { currentPage++; loadEmployees(); };
+    document.getElementById("pageSize").addEventListener("change", () => { currentPage = 1; loadEmployees(); });
+
+    document.getElementById("empSaveBtn").onclick = async () => {
+        const id = document.getElementById("fEmpId").value;
+        const name = document.getElementById("fEmpName").value.trim();
+        if (!name) return toast("请输入姓名", "error");
+        const deptId = Number(document.getElementById("fDept").value);
+        const posId = Number(document.getElementById("fPos").value);
+        if (!deptId || !posId) return toast("请选择部门和职位", "error");
+        const emp = {
+            empNo: document.getElementById("fEmpNo").value.trim() || null,
+            empName: name,
+            gender: document.getElementById("fGender").value,
+            birthDate: document.getElementById("fBirth").value || null,
+            hireDate: document.getElementById("fHire").value,
+            phone: document.getElementById("fPhone").value.trim() || null,
+            email: document.getElementById("fEmail").value.trim() || null,
+            deptId, positionId: posId
+        };
+        const url = id ? "/api/employees/" + id : "/api/employees";
+        const r = await api(url, { method: id ? "PUT" : "POST", body: JSON.stringify(emp) });
+        if (r !== null) {
+            toast(id ? "已保存" : "新增成功，登录账号为工号，默认密码 123456");
+            hideModal("empModal");
+            loadEmployees();
+        }
+    };
+
+    async function exportEmployees() {
+        const p = new URLSearchParams();
+        const kw = document.getElementById("qKeyword").value.trim();
+        const dept = role === "MANAGER" ? "" : document.getElementById("qDept").value;
+        const status = document.getElementById("qStatus").value;
+        if (kw) p.set("keyword", kw);
+        if (dept) p.set("deptId", dept);
+        if (status !== "") p.set("status", status);
+        toast("正在生成 Excel…");
+        const list = await api("/api/employees/export-list?" + p.toString(), { silent: true });
+        if (list === null) return;
+        if (!list.length) return toast("暂无数据可导出", "error");
+        const columns = [
+            { key: "empNo", label: "工号" }, { key: "empName", label: "姓名" },
+            { key: "gender", label: "性别" }, { key: "deptName", label: "部门" },
+            { key: "positionName", label: "职位" }, { key: "phone", label: "电话" },
+            { key: "email", label: "邮箱" }, { key: "hireDate", label: "入职日期" },
+            { key: "statusText", label: "状态" }
+        ];
+        const rows = list.map(e => ({ ...e, statusText: e.status === 1 ? "在职" : "已离职" }));
+        // 只有真的拿到文件才提示成功：失败时 exportXlsx 内部已经弹过错误提示
+        if (await exportXlsx(`员工列表_${dateNow()}.xlsx`, columns, rows)) {
+            toast("Excel 已导出");
+        }
+    }
+
+    async function leaveEmp(id, name) {
+        if (!await confirmDlg(`确定要将“${name}”办理离职吗？离职后其账号将被禁用。`)) return;
+        const r = await api(`/api/employees/${id}/status`, { method: "PUT", body: JSON.stringify({ status: 0 }) });
+        if (r !== null) { toast("已办理离职"); loadEmployees(); }
+    }
+    async function restoreEmp(id, name) {
+        if (!await confirmDlg(`确定要让“${name}”复职吗？其账号将重新启用。`)) return;
+        const r = await api(`/api/employees/${id}/status`, { method: "PUT", body: JSON.stringify({ status: 1 }) });
+        if (r !== null) { toast("已办理复职"); loadEmployees(); }
+    }
+
+    (async () => {
+        document.getElementById("toolbarAdmin").innerHTML =
+            (CAN_EDIT ? `<button class="btn btn-brand" onclick="openCreate()">新增员工</button>` : "")
+            + `<button class="btn btn-outline-brand" onclick="exportEmployees()">导出 Excel</button>`;
+        await loadDepts();
+        await loadEmployees();
+    })();
+</script>
+</body>
+</html>

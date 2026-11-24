@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<!-- HRMS-404 账号管理（开通账号 / 改角色 / 重置密码 / 启停） -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('账号管理','users')}"></head>
+<body>
+<div class="layout">
+    <aside th:replace="~{fragments :: sidebar('users')}"></aside>
+    <div class="main-col">
+        <div th:replace="~{fragments :: topbar('users')}"></div>
+
+<main class="app-container">
+    <!-- 区域一：页面头部 -->
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">账号管理</h1>
+            <div class="page-sub" id="accCount">正在统计账号数据…</div>
+        </div>
+        <div class="page-extra">
+            <button class="btn btn-brand" onclick="openCreate()">开通账号</button>
+        </div>
+    </div>
+
+    <!-- 区域二：筛选条件栏 -->
+    <div class="filter-bar">
+        <input class="form-control" id="qKeyword" placeholder="搜索登录名 / 姓名 / 工号" style="width:230px">
+        <select class="form-select" id="qRole" style="width:150px">
+            <option value="">全部角色</option>
+            <option value="ADMIN">系统管理员</option>
+            <option value="HR">人事专员</option>
+            <option value="MANAGER">部门经理</option>
+            <option value="EMPLOYEE">普通员工</option>
+        </select>
+        <select class="form-select" id="qEnabled" style="width:130px">
+            <option value="">全部状态</option>
+            <option value="1">启用</option>
+            <option value="0">禁用</option>
+        </select>
+        <button class="btn btn-brand px-3" onclick="doSearch()">查询</button>
+        <button class="btn btn-outline-brand px-3" onclick="doReset()">重置</button>
+    </div>
+
+    <!-- 区域三：数据表格 -->
+    <div class="card card-panel table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr>
+                    <th>登录账号</th><th>关联员工</th><th>部门</th><th>角色</th>
+                    <th>状态</th><th>创建时间</th><th style="width:190px">操作</th>
+                </tr></thead>
+                <tbody id="accBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 区域四：分页控件 -->
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <span class="text-secondary small" id="pageInfo"></span>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-secondary small">每页</span>
+            <select class="form-select form-select-sm" id="pageSize" style="width:74px">
+                <option>5</option><option selected>10</option><option>20</option>
+            </select>
+            <span class="text-secondary small">条</span>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-secondary" id="prevPage">上一页</button>
+                <button class="btn btn-outline-secondary" id="nextPage">下一页</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- 弹窗一：开通账号 -->
+<div class="modal fade" id="createModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">开通账号</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="field-group-title">关联员工</div>
+                <div class="d-flex gap-2">
+                    <input class="form-control" id="cEmpSearch" placeholder="搜索工号 / 姓名，留空看全部在职员工">
+                    <button class="btn btn-outline-brand px-3" id="cEmpSearchBtn">搜索</button>
+                </div>
+                <select class="form-select mt-2" id="cEmp" size="4" style="height:auto"></select>
+                <div class="form-text">选择「不绑定员工」可创建管理员账号；已有账号的员工不可重复开通。</div>
+
+                <div class="field-group-title mt-4">账号信息</div>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">登录名 <span class="text-secondary fw-normal">（默认取工号）</span></label>
+                        <input class="form-control" id="cUsername" placeholder="3~30 位字母、数字或下划线" maxlength="30">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">角色 <span class="req">*</span></label>
+                        <select class="form-select" id="cRole"></select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">初始密码 <span class="text-secondary fw-normal">（默认 123456）</span></label>
+                        <input class="form-control" id="cPassword" placeholder="留空使用默认密码" maxlength="20">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-brand px-4" id="cSaveBtn">开通</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗二：修改角色 -->
+<div class="modal fade" id="roleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改角色</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">账号：<b id="roleTarget"></b></p>
+                <select class="form-select" id="roleSelect"></select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-brand px-4" id="roleSaveBtn">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗三：重置密码 -->
+<div class="modal fade" id="resetModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">重置密码</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">账号：<b id="resetTarget"></b></p>
+                <label class="form-label">新密码</label>
+                <input class="form-control" id="resetPwd" placeholder="留空则重置为 123456" maxlength="20">
+                <div class="form-text">长度 6~20 位；重置后请通知本人尽快修改。</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-brand px-4" id="resetSaveBtn">重置</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <div th:replace="~{fragments :: footer}"></div>
+    </div>
+</div>
+<div th:replace="~{fragments :: scripts}"></div>
+<div th:replace="~{fragments :: globalActions}"></div>
+<script>
+    const ROLE_TEXT = { ADMIN: "系统管理员", HR: "人事专员", MANAGER: "部门经理", EMPLOYEE: "普通员工" };
+    // 人事专员不可授予 ADMIN/HR（后端 UserAccountService.requireGrantable 二次校验）
+    const GRANTABLE = CTX.role === "ADMIN"
+        ? ["ADMIN", "HR", "MANAGER", "EMPLOYEE"]
+        : ["MANAGER", "EMPLOYEE"];
+
+    let currentPage = 1;
+    let roleTargetId = null, resetTargetId = null;
+
+    /** 自己 / 人事专员不可操作的账号：不渲染操作按钮（后端同样拦截） */
+    function canOperate(u) {
+        if (String(u.userId) === String(CTX.userId)) return false;
+        if (CTX.role === "HR" && u.roleCode === "ADMIN") return false;
+        return true;
+    }
+
+    function params() {
+        const p = new URLSearchParams({ page: currentPage, size: document.getElementById("pageSize").value });
+        const kw = document.getElementById("qKeyword").value.trim();
+        const role = document.getElementById("qRole").value;
+        const en = document.getElementById("qEnabled").value;
+        if (kw) p.set("keyword", kw);
+        if (role) p.set("roleCode", role);
+        if (en !== "") p.set("enabled", en);
+        return p;
+    }
+
+    function actionButtons(u) {
+        if (!canOperate(u)) return '<span class="text-secondary" style="font-size:12.5px">—</span>';
+        const pwd = String(u.userId);
+        return `<button class="btn-text" onclick="openRole(${pwd},'${esc(u.username)}','${esc(u.roleCode)}')">改角色</button>
+                <button class="btn-text" onclick="openReset(${pwd},'${esc(u.username)}')">重置密码</button>
+                ${u.enabled === 1
+                    ? `<button class="btn-text btn-text-danger" onclick="toggleEnabled(${pwd},'${esc(u.username)}',0)">禁用</button>`
+                    : `<button class="btn-text" style="color:var(--green)" onclick="toggleEnabled(${pwd},'${esc(u.username)}',1)">启用</button>`}`;
+    }
+
+    async function loadAccounts() {
+        const data = await api("/api/users?" + params().toString(), { silent: true });
+        if (!data) return;
+        document.getElementById("accCount").textContent = `共 ${data.total} 个账号`;
+        const body = document.getElementById("accBody");
+        if (!data.records.length) {
+            body.innerHTML = `<tr><td colspan="7"><div class="empty-404 mt-3 mb-3">
+                <div class="big">404</div><div class="mt-1">暂无数据</div></div></td></tr>`;
+            document.getElementById("pageInfo").textContent = "";
+            return;
+        }
+        body.innerHTML = data.records.map(u => `
+            <tr>
+              <td><b>${esc(u.username)}</b></td>
+              <td>${u.empName
+                    ? `${esc(u.empName)} <span class="text-secondary" style="font-size:12px">${esc(u.empNo)}</span>`
+                    : '<span class="text-secondary" style="font-size:12.5px">— 未绑定员工</span>'}</td>
+              <td>${esc(u.deptName || "—")}</td>
+              <td><span class="st-badge">${esc(ROLE_TEXT[u.roleCode] || u.roleCode)}</span></td>
+              <td>${u.enabled === 1
+                    ? '<span class="status-pill status-on">启用</span>'
+                    : '<span class="status-pill status-off">禁用</span>'}</td>
+              <td class="text-secondary" style="font-size:12.5px">${esc(fmtDateTime(u.createdAt))}</td>
+              <td>${actionButtons(u)}</td>
+            </tr>`).join("");
+        document.getElementById("pageInfo").textContent =
+            `共 ${data.total} 条，第 ${data.page} / ${Math.max(1, Math.ceil(data.total / data.size))} 页`;
+        document.getElementById("prevPage").disabled = data.page <= 1;
+        document.getElementById("nextPage").disabled = data.page * data.size >= data.total;
+    }
+
+    function doSearch() { currentPage = 1; loadAccounts(); }
+    function doReset() {
+        document.getElementById("qKeyword").value = "";
+        document.getElementById("qRole").value = "";
+        document.getElementById("qEnabled").value = "";
+        currentPage = 1;
+        loadAccounts();
+    }
+
+    /* ---------- 开通账号 ---------- */
+    function roleOptions(selected) {
+        return GRANTABLE.map(r =>
+            `<option value="${r}"${r === selected ? " selected" : ""}>${ROLE_TEXT[r]}</option>`).join("");
+    }
+
+    async function searchCandidates() {
+        const kw = document.getElementById("cEmpSearch").value.trim();
+        const list = await api("/api/users/candidates?keyword=" + encodeURIComponent(kw), { silent: true });
+        if (!list) return;
+        const sel = document.getElementById("cEmp");
+        sel.innerHTML = '<option value="">不绑定员工（管理员账号）</option>' + list.map(c =>
+            `<option value="${c.empId}" data-empno="${esc(c.empNo)}"${c.hasAccount === 1 ? " disabled" : ""}>`
+            + `${esc(c.empNo)} · ${esc(c.empName)}（${esc(c.deptName || "无部门")}）`
+            + `${c.hasAccount === 1 ? " — 已有账号" : ""}</option>`).join("");
+    }
+
+    function openCreate() {
+        document.getElementById("cEmpSearch").value = "";
+        document.getElementById("cUsername").value = "";
+        document.getElementById("cPassword").value = "";
+        document.getElementById("cRole").innerHTML = roleOptions("EMPLOYEE");
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("createModal")).show();
+        searchCandidates();
+    }
+
+    document.getElementById("cEmpSearchBtn").onclick = searchCandidates;
+    document.getElementById("cEmpSearch").addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); searchCandidates(); }
+    });
+    // 选中员工后登录名默认取工号；选「不绑定员工」则清空待填
+    document.getElementById("cEmp").addEventListener("change", e => {
+        const opt = e.target.selectedOptions[0];
+        document.getElementById("cUsername").value = opt ? (opt.dataset.empno || "") : "";
+    });
+
+    document.getElementById("cSaveBtn").onclick = async () => {
+        const empVal = document.getElementById("cEmp").value;
+        const r = await api("/api/users", {
+            method: "POST",
+            body: JSON.stringify({
+                empId: empVal ? Number(empVal) : null,
+                username: document.getElementById("cUsername").value.trim() || null,
+                password: document.getElementById("cPassword").value || null,
+                roleCode: document.getElementById("cRole").value
+            })
+        });
+        if (r !== null) {
+            toast(`账号「${r}」开通成功`);
+            hideModal("createModal");
+            currentPage = 1;
+            loadAccounts();
+        }
+    };
+
+    /* ---------- 改角色 ---------- */
+    function openRole(userId, username, roleCode) {
+        roleTargetId = userId;
+        document.getElementById("roleTarget").textContent = username;
+        document.getElementById("roleSelect").innerHTML = roleOptions(roleCode);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("roleModal")).show();
+    }
+
+    document.getElementById("roleSaveBtn").onclick = async () => {
+        const roleCode = document.getElementById("roleSelect").value;
+        const r = await api(`/api/users/${roleTargetId}/role`, {
+            method: "PUT", body: JSON.stringify({ roleCode })
+        });
+        if (r !== null) { toast("角色已更新"); hideModal("roleModal"); loadAccounts(); }
+    };
+
+    /* ---------- 重置密码 ---------- */
+    function openReset(userId, username) {
+        resetTargetId = userId;
+        document.getElementById("resetTarget").textContent = username;
+        document.getElementById("resetPwd").value = "";
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("resetModal")).show();
+    }
+
+    document.getElementById("resetSaveBtn").onclick = async () => {
+        const newPassword = document.getElementById("resetPwd").value;
+        const r = await api(`/api/users/${resetTargetId}/password`, {
+            method: "PUT", body: JSON.stringify({ newPassword })
+        });
+        if (r !== null) {
+            toast(`密码已重置为「${r}」`);
+            hideModal("resetModal");
+        }
+    };
+
+    /* ---------- 启用 / 禁用 ---------- */
+    async function toggleEnabled(userId, username, enabled) {
+        const word = enabled === 0 ? "禁用" : "启用";
+        if (!await confirmDlg(`确定要${word}账号「${username}」吗？`)) return;
+        const r = await api(`/api/users/${userId}/enabled`, {
+            method: "PUT", body: JSON.stringify({ enabled })
+        });
+        if (r !== null) { toast(`账号已${word}`); loadAccounts(); }
+    }
+
+    document.getElementById("prevPage").onclick = () => { if (currentPage > 1) { currentPage--; loadAccounts(); } };
+    document.getElementById("nextPage").onclick = () => { currentPage++; loadAccounts(); };
+    document.getElementById("pageSize").addEventListener("change", () => { currentPage = 1; loadAccounts(); });
+
+    loadAccounts();
+</script>
+</body>
+</html>

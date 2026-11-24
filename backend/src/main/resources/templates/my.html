@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!-- HRMS-404 我的中心 -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('我的中心','my')}"></head>
+<body>
+<div class="layout">
+    <aside th:replace="~{fragments :: sidebar('my')}"></aside>
+    <div class="main-col">
+        <div th:replace="~{fragments :: topbar('my')}"></div>
+
+<main class="app-container">
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">我的中心</h1>
+            <div class="page-sub" th:text="|${session.LOGIN_USER.roleName} · ${session.LOGIN_USER.deptName} · ${session.LOGIN_USER.positionName}|">
+                个人档案 · 我的考勤 · 我的薪资
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-xl-4">
+            <div class="card card-panel h-100">
+                <div class="card-header bg-white border-bottom py-3 px-4 fw-semibold">个人档案</div>
+                <div class="card-body p-4 pt-3" id="myInfo">
+                    <div class="text-secondary small">加载中…</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-8">
+            <div class="card card-panel table-card mb-3">
+                <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">本月考勤</span>
+                    <input type="month" class="form-control form-control-sm" id="myMonth" style="width:150px"
+                           th:value="${#temporals.format(#temporals.createNow(), 'yyyy-MM')}">
+                </div>
+                <div class="table-responsive" id="myAttArea"></div>
+            </div>
+            <div class="card card-panel table-card">
+                <div class="card-header bg-white border-bottom py-3 px-4 fw-semibold">薪资记录</div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead><tr><th>月份</th><th>基本工资</th><th>绩效</th><th>扣款</th><th class="text-end">实发工资</th></tr></thead>
+                        <tbody id="salBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+        <div th:replace="~{fragments :: footer}"></div>
+    </div>
+</div>
+<div th:replace="~{fragments :: scripts}"></div>
+<div th:replace="~{fragments :: globalActions}"></div>
+<script>
+    async function loadInfo() {
+        const info = await api("/api/my/info", { silent: true });
+        const el = document.getElementById("myInfo");
+        if (!info) {
+            el.innerHTML = `<div class="text-secondary small">当前账号为管理员，未关联员工档案。</div>`;
+            return;
+        }
+        const rows = [
+            ["工号", info.empNo], ["姓名", info.empName],
+            ["性别", `${info.gender} · ${fmtDateZh(info.birthDate)} 出生`],
+            ["联系方式", info.phone ? maskPhone(info.phone) : "-"],
+            ["邮箱", info.email || "-"],
+            ["任职", `${info.deptName} · ${info.positionName}`],
+            ["入职日期", fmtDateZh(info.hireDate)],
+            ["状态", ""]
+        ];
+        el.innerHTML = rows.map(([k, v]) => `
+            <div class="d-flex justify-content-between py-2 ${k === '任职' ? '' : 'border-bottom'}" style="border-color:#f0f3f7">
+                <span class="text-secondary">${k}</span>
+                <span class="text-end">${k === "状态" ? empStatusBadge(info.status) : esc(v)}</span>
+            </div>`).join("");
+    }
+
+    async function loadAtt() {
+        const month = document.getElementById("myMonth").value || monthNow();
+        const rows = await api(`/api/my/attendance?month=${month}`, { silent: true });
+        const area = document.getElementById("myAttArea");
+        if (!rows || !rows.length) {
+            area.innerHTML = `<div class="empty-404 m-4"><div class="big">404</div>
+                <div class="mt-1">${month} 暂无打卡记录</div></div>`;
+            return;
+        }
+        area.innerHTML = `<table class="table table-hover align-middle mb-0">
+            <thead><tr><th>日期</th><th>上班打卡</th><th>下班打卡</th><th>状态</th></tr></thead>
+            <tbody>${rows.map(r => `<tr>
+                <td>${fmtDateZh(r.workDate)}</td>
+                <td>${r.checkInTime ? fmtTime(r.checkInTime) : '<span class="text-secondary">-</span>'}</td>
+                <td>${r.checkOutTime ? fmtTime(r.checkOutTime) : '<span class="text-secondary">-</span>'}</td>
+                <td>${attBadge(r.status)}</td>
+            </tr>`).join("")}</tbody></table>`;
+    }
+
+    async function loadSal() {
+        const rows = await api("/api/my/salaries", { silent: true });
+        const body = document.getElementById("salBody");
+        if (!rows || !rows.length) {
+            body.innerHTML = `<tr><td colspan="5"><div class="empty-404 m-4"><div class="big">404</div>
+                <div class="mt-1">暂无薪资记录，等待 HR 生成</div></div></td></tr>`;
+            return;
+        }
+        body.innerHTML = rows.map(r => `
+            <tr>
+              <td><b>${esc(r.salaryMonth)}</b></td>
+              <td>¥ ${money(r.baseSalary)}</td>
+              <td>¥ ${money(r.performance)}</td>
+              <td class="${Number(r.deduction) > 0 ? 'text-danger' : ''}">¥ ${money(r.deduction)}</td>
+              <td class="text-end"><b>¥ ${money(r.actualSalary)}</b></td>
+            </tr>`).join("");
+    }
+
+    loadInfo();
+    loadAtt();
+    loadSal();
+    document.getElementById("myMonth").addEventListener("change", loadAtt);
+</script>
+</body>
+</html>

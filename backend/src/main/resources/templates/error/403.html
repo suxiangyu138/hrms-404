@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<!-- HRMS-404 · 403 无权限 -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>403 · 无权限 · HRMS-404</title>
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/css/hrms.css}">
+</head>
+<body class="d-flex align-items-center justify-content-center" style="min-height:100vh;background:#0f172a">
+    <div class="text-center text-white px-3">
+        <div class="display-5 fw-bolder" style="color:#facc15">403</div>
+        <div class="h6 mt-3 mb-4 text-white-50">该功能仅对特定角色开放——你的工牌权限不够（如需访问请找 HR）</div>
+        <a class="btn px-4 btn-outline-light" th:href="@{/}">返回首页</a>
+        <div class="mt-5 small text-white-50">© 2026 404 Not Found 小组 · HRMS-404</div>
+    </div>
+</body>
+</html>

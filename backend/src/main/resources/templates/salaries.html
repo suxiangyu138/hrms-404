@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<!-- HRMS-404 薪资管理 -->
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('薪资管理','salaries')}"></head>
+<body>
+<div class="layout">
+    <aside th:replace="~{fragments :: sidebar('salaries')}"></aside>
+    <div class="main-col">
+        <div th:replace="~{fragments :: topbar('salaries')}"></div>
+
+<main class="app-container">
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">薪资管理</h1>
+            <div class="page-sub">按月度查询与发放；生成操作调用存储过程，重复点击不会产生重复记录。已生成的月份不会重算，之后的考勤变动不会回填（如需重算请先删除该月记录）</div>
+        </div>
+        <div class="page-extra">
+            <select class="form-select" id="monthSel" style="width:140px"></select>
+            <button class="btn btn-brand" onclick="generateMonth()">生成当月薪资</button>
+            <button class="btn btn-outline-brand" onclick="exportSalary()">导出 Excel</button>
+        </div>
+    </div>
+
+    <!-- 统计卡片：应发/实发/人数/平均 -->
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-xl-3">
+            <div class="card card-panel card-stat h-100"><div class="card-body py-3">
+                <div class="stat-label">应发工资总额</div>
+                <div class="stat-num mt-1" id="stTotalPay">¥ 0.00</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="card card-panel card-stat h-100"><div class="card-body py-3">
+                <div class="stat-label">实发工资总额</div>
+                <div class="stat-num mt-1" id="stActualPay">¥ 0.00</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="card card-panel card-stat h-100"><div class="card-body py-3">
+                <div class="stat-label">发放人数</div>
+                <div class="stat-num mt-1" id="stCount">0</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="card card-panel card-stat h-100"><div class="card-body py-3">
+                <div class="stat-label">平均实发</div>
+                <div class="stat-num mt-1" id="stAvg">¥ 0.00</div>
+            </div></div>
+        </div>
+    </div>
+
+    <!-- 薪资记录表格 -->
+    <div class="card card-panel table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr>
+                    <th>工号</th><th>姓名</th><th>部门</th><th>基本工资</th>
+                    <th>绩效</th><th>扣款</th><th>实发工资</th><th>状态</th><th style="width:90px">操作</th>
+                </tr></thead>
+                <tbody id="salBody"></tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- 绩效/扣款调整弹窗 -->
+<div class="modal fade" id="adjModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="adjTitle">调整薪资</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="adjId">
+                <div class="mb-3">
+                    <label class="form-label">绩效奖金</label>
+                    <input type="number" min="0" step="50" class="form-control" id="adjPerf">
+                </div>
+                <div class="mb-1">
+                    <label class="form-label">扣款</label>
+                    <input type="number" min="0" step="10" class="form-control" id="adjDed">
+                </div>
+                <div class="form-text mt-2">保存后实发工资将按“基本 + 绩效 - 扣款”重新计算。</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-brand px-3" onclick="saveAdj()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <div th:replace="~{fragments :: footer}"></div>
+    </div>
+</div>
+<div th:replace="~{fragments :: scripts}"></div>
+<div th:replace="~{fragments :: globalActions}"></div>
+<script>
+    let curRows = [];
+
+    async function loadMonths() {
+        const months = await api("/api/salaries/months", { silent: true });
+        if (!months) return;
+        const sel = document.getElementById("monthSel");
+        sel.innerHTML = months.map(m => `<option value="${m}" ${m === monthNow() ? "selected" : ""}>${m} 月薪资</option>`).join("");
+    }
+
+    async function loadSalary() {
+        const month = document.getElementById("monthSel").value;
+        const rows = await api("/api/salaries?month=" + month, { silent: true });
+        const body = document.getElementById("salBody");
+        curRows = rows || [];
+        if (!curRows.length) {
+            body.innerHTML = `<tr><td colspan="9"><div class="empty-404 m-4"><div class="big">404</div>
+                <div class="mt-1">${month} 尚未生成薪资，点击右上角按钮调用存储过程生成</div></div></td></tr>`;
+            setStats(0, 0, 0, 0);
+            return;
+        }
+        let totalPay = 0, actualPay = 0;
+        body.innerHTML = curRows.map(r => {
+            totalPay += Number(r.baseSalary || 0) + Number(r.performance || 0);
+            actualPay += Number(r.actualSalary || 0);
+            return `<tr>
+              <td><b>${esc(r.empNo)}</b></td>
+              <td>${esc(r.empName)}</td>
+              <td>${esc(r.deptName)}</td>
+              <td>¥ ${money(r.baseSalary)}</td>
+              <td>¥ ${money(r.performance)}</td>
+              <td class="${Number(r.deduction) > 0 ? "text-danger" : ""}">¥ ${money(r.deduction)}</td>
+              <td><b>¥ ${money(r.actualSalary)}</b></td>
+              <td><span class="status-pill status-on">已发放</span></td>
+              <td><button class="btn-text" onclick="openAdj(${r.salaryId},'${esc(r.empName)}',${r.performance},${r.deduction})">调整</button></td>
+            </tr>`;
+        }).join("");
+        setStats(totalPay, actualPay, curRows.length, actualPay / curRows.length);
+    }
+
+    function setStats(totalPay, actualPay, count, avg) {
+        document.getElementById("stTotalPay").textContent = "¥ " + money(totalPay);
+        document.getElementById("stActualPay").textContent = "¥ " + money(actualPay);
+        document.getElementById("stCount").textContent = count;
+        document.getElementById("stAvg").textContent = "¥ " + money(avg);
+    }
+
+    async function generateMonth() {
+        const month = document.getElementById("monthSel").value;
+        const r = await api("/api/salaries/generate", { method: "POST", body: JSON.stringify({ month }) });
+        if (r !== null) { toast(r === 0 ? "当月薪资已全部生成" : `已生成 ${r} 条薪资记录`); loadSalary(); }
+    }
+
+    function openAdj(id, name, perf, ded) {
+        document.getElementById("adjId").value = id;
+        document.getElementById("adjTitle").textContent = `调整 · ${name}`;
+        document.getElementById("adjPerf").value = perf;
+        document.getElementById("adjDed").value = ded;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("adjModal")).show();
+    }
+
+    async function saveAdj() {
+        const id = document.getElementById("adjId").value;
+        const r = await api("/api/salaries/" + id, {
+            method: "PUT",
+            body: JSON.stringify({
+                performance: Number(document.getElementById("adjPerf").value || 0),
+                deduction: Number(document.getElementById("adjDed").value || 0)
+            })
+        });
+        if (r !== null) { toast("已保存，实发工资已重算"); hideModal("adjModal"); loadSalary(); }
+    }
+
+    async function exportSalary() {
+        if (!curRows.length) return toast("暂无数据可导出", "error");
+        const month = document.getElementById("monthSel").value;
+        const columns = [
+            { key: "empNo", label: "工号" }, { key: "empName", label: "姓名" }, { key: "deptName", label: "部门" },
+            { key: "baseSalary", label: "基本工资" }, { key: "performance", label: "绩效" },
+            { key: "deduction", label: "扣款" }, { key: "actualSalary", label: "实发工资" },
+            { key: "createdAt", label: "生成时间" }
+        ];
+        // 只有真的拿到文件才提示成功：失败时 exportXlsx 内部已经弹过错误提示
+        if (await exportXlsx(`薪资_${month}.xlsx`, columns, curRows)) {
+            toast("Excel 已导出");
+        }
+    }
+
+    (async () => {
+        await loadMonths();
+        await loadSalary();
+        document.getElementById("monthSel").addEventListener("change", loadSalary);
+    })();
+</script>
+</body>
+</html>

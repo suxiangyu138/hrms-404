@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="hrBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E3A8A"/>
+      <stop offset="100%" stop-color="#0B1E54"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="48" height="48" rx="12" fill="url(#hrBg)"/>
+
+  <!-- 抽象 H / 双人连接结构 -->
+  <rect x="15" y="15" width="4" height="18" rx="2" fill="#FFFFFF"/>
+  <rect x="29" y="15" width="4" height="18" rx="2" fill="#FFFFFF"/>
+  <rect x="19" y="22" width="10" height="4" rx="2" fill="#FFFFFF"/>
+
+  <!-- 中心节点 -->
+  <circle cx="24" cy="24" r="2.8" fill="#38BDF8"/>
+</svg>
